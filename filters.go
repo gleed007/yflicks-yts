@@ -26,6 +26,12 @@ type SearchMoviesFilters struct {
 	WithRTRatings bool   `json:"with_rt_ratings" validate:"boolean"`
 }
 
+type MovieDetailsFilters struct {
+	MovieID    int  `json:"movie_id"    validate:"required,min=1"`
+	WithImages bool `json:"with_images" validate:"boolean"`
+	WithCast   bool `json:"with_cast"   validate:"boolean"`
+}
+
 func DefaultSearchMoviesFilter() *SearchMoviesFilters {
 	const (
 		defaultPageLimit     = 20
@@ -42,6 +48,14 @@ func DefaultSearchMoviesFilter() *SearchMoviesFilters {
 		SortBy:        "date_added",
 		OrderBy:       "desc",
 		WithRTRatings: false,
+	}
+}
+
+func DefaultMovieDetailsFilters(movieID int) *MovieDetailsFilters {
+	return &MovieDetailsFilters{
+		MovieID:    movieID,
+		WithImages: true,
+		WithCast:   true,
 	}
 }
 
@@ -101,6 +115,45 @@ func (f *SearchMoviesFilters) getQueryString() (string, error) {
 				queryValues.Add(query, v)
 			}
 		}
+	}
+
+	return queryValues.Encode(), nil
+}
+
+func (f *MovieDetailsFilters) validateFields() error {
+	err := validate.Struct(f)
+	if err == nil {
+		return nil
+	}
+
+	filterErrors := make([]error, 0)
+	for _, err := range err.(validator.ValidationErrors) {
+		filterError := &FilterValidationError{
+			filter:   "MovieDetailsFilters",
+			field:    err.Field(),
+			tag:      err.ActualTag(),
+			value:    err.Value(),
+			expected: err.Param(),
+		}
+		filterErrors = append(filterErrors, filterError)
+	}
+
+	return errors.Join(filterErrors...)
+}
+
+func (f *MovieDetailsFilters) getQueryString() (string, error) {
+	if err := f.validateFields(); err != nil {
+		return "", err
+	}
+
+	queryValues := url.Values{}
+	queryValues.Add("movie_id", fmt.Sprintf("%d", f.MovieID))
+	if f.WithImages {
+		queryValues.Add("with_images", "true")
+	}
+
+	if f.WithCast {
+		queryValues.Add("with_cast", "true")
 	}
 
 	return queryValues.Encode(), nil
