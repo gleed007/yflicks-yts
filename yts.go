@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/atifcppprogrammer/yflicks-yts/internal/validate"
 )
 
 const APIBaseURL = "https://yts.mx/api/v2"
@@ -15,6 +17,8 @@ type Client struct {
 	apiBaseURL string
 	apiClient  *http.Client
 }
+
+type FilterValidationError validate.StructValidationError
 
 func NewClient() *Client {
 	return &Client{APIBaseURL, &http.Client{}}

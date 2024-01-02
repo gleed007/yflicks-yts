@@ -1,18 +1,11 @@
 package yts
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 
-	"github.com/go-playground/validator/v10"
+	"github.com/atifcppprogrammer/yflicks-yts/internal/validate"
 )
-
-var validate *validator.Validate
-
-func init() {
-	validate = validator.New(validator.WithRequiredStructEnabled())
-}
 
 type SearchMoviesFilters struct {
 	Limit         int    `json:"limit"           validate:"min=1,max=50"`
@@ -59,29 +52,8 @@ func DefaultMovieDetailsFilters(movieID int) *MovieDetailsFilters {
 	}
 }
 
-func (f *SearchMoviesFilters) validateFields() error {
-	err := validate.Struct(f)
-	if err == nil {
-		return nil
-	}
-
-	filterErrors := make([]error, 0)
-	for _, err := range err.(validator.ValidationErrors) {
-		filterError := &FilterValidationError{
-			filter:   "SearchMovieFilters",
-			field:    err.Field(),
-			tag:      err.ActualTag(),
-			value:    err.Value(),
-			expected: err.Param(),
-		}
-		filterErrors = append(filterErrors, filterError)
-	}
-
-	return errors.Join(filterErrors...)
-}
-
 func (f *SearchMoviesFilters) getQueryString() (string, error) {
-	if err := f.validateFields(); err != nil {
+	if err := validate.Struct("SearchMoviesFilters", f); err != nil {
 		return "", err
 	}
 
@@ -120,29 +92,8 @@ func (f *SearchMoviesFilters) getQueryString() (string, error) {
 	return queryValues.Encode(), nil
 }
 
-func (f *MovieDetailsFilters) validateFields() error {
-	err := validate.Struct(f)
-	if err == nil {
-		return nil
-	}
-
-	filterErrors := make([]error, 0)
-	for _, err := range err.(validator.ValidationErrors) {
-		filterError := &FilterValidationError{
-			filter:   "MovieDetailsFilters",
-			field:    err.Field(),
-			tag:      err.ActualTag(),
-			value:    err.Value(),
-			expected: err.Param(),
-		}
-		filterErrors = append(filterErrors, filterError)
-	}
-
-	return errors.Join(filterErrors...)
-}
-
 func (f *MovieDetailsFilters) getQueryString() (string, error) {
-	if err := f.validateFields(); err != nil {
+	if err := validate.Struct("MovieDetailsFilters", f); err != nil {
 		return "", err
 	}
 
