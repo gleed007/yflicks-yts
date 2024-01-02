@@ -19,10 +19,14 @@ func NewClient() *Client {
 }
 
 func (c Client) SearchMovies(filters *SearchMoviesFilters) (*SearchMoviesResponse, error) {
-	queryString := filters.getQueryString()
+	queryString, err := filters.getQueryString()
+	if err != nil {
+		return nil, err
+	}
+
 	parsedPayload := &SearchMoviesResponse{}
 	targetURL := c.getEndpointURL("list_movies.json", queryString)
-	err := c.getEndpointPayload(targetURL, parsedPayload)
+	err = c.getEndpointPayload(targetURL, parsedPayload)
 	if err != nil {
 		return nil, err
 	}
