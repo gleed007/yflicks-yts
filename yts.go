@@ -2,9 +2,11 @@ package yts
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 )
 
 const APIBaseURL = "https://yts.mx/api/v2"
@@ -43,6 +45,27 @@ func (c Client) GetMovieDetails(filters *MovieDetailsFilters) (*MovieDetailsResp
 	parsedPayload := &MovieDetailsResponse{}
 	targetURL := c.getEndpointURL("movie_details.json", queryString)
 	err = c.getEndpointPayload(targetURL, parsedPayload)
+	if err != nil {
+		return nil, err
+	}
+
+	return parsedPayload, nil
+}
+
+func (c Client) GetMovieSuggestions(movieID int) (*MovieSuggestionsResponse, error) {
+	if movieID <= 0 {
+		return nil, errors.New("provided movieID must be at least 1")
+	}
+
+	var (
+		movieIDStr  = fmt.Sprintf("%d", movieID)
+		queryValues = url.Values{"movie_id": []string{movieIDStr}}
+		queryString = queryValues.Encode()
+	)
+
+	parsedPayload := &MovieSuggestionsResponse{}
+	targetURL := c.getEndpointURL("movie_suggestions.json", queryString)
+	err := c.getEndpointPayload(targetURL, parsedPayload)
 	if err != nil {
 		return nil, err
 	}

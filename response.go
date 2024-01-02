@@ -17,6 +17,11 @@ type MovieDetailsData struct {
 	Movie MovieDetails `json:"movie"`
 }
 
+type MovieSuggestionsData struct {
+	MovieCount int     `json:"movie_count"`
+	Movies     []Movie `json:"movies"`
+}
+
 type SearchMoviesResponse struct {
 	BaseResponse
 	Data SearchMoviesData
@@ -25,4 +30,9 @@ type SearchMoviesResponse struct {
 type MovieDetailsResponse struct {
 	BaseResponse
 	Data MovieDetailsData
+}
+
+type MovieSuggestionsResponse struct {
+	BaseResponse
+	Data MovieSuggestionsData
 }
