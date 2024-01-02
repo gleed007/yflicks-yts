@@ -13,7 +13,16 @@ type SearchMoviesData struct {
 	Movies     []Movie `json:"movies"`
 }
 
+type MovieDetailsData struct {
+	Movie MovieDetails `json:"movie"`
+}
+
 type SearchMoviesResponse struct {
 	BaseResponse
 	Data SearchMoviesData
+}
+
+type MovieDetailsResponse struct {
+	BaseResponse
+	Data MovieDetailsData
 }
