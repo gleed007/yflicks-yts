@@ -2,14 +2,34 @@ package validate
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/go-playground/validator/v10"
 )
+
+type StructValidationError struct {
+	Struct   string
+	Field    string
+	Tag      string
+	Value    interface{}
+	Expected string
+}
 
 var validate *validator.Validate
 
 func init() {
 	validate = validator.New(validator.WithRequiredStructEnabled())
+}
+
+func (e *StructValidationError) Error() string {
+	return fmt.Sprintf(
+		`failed validation for "%s.%s" field's "%s:%s" tag, provided value %v`,
+		e.Struct,
+		e.Field,
+		e.Tag,
+		e.Expected,
+		e.Value,
+	)
 }
 
 func Struct(name string, value interface{}) error {
@@ -18,17 +38,17 @@ func Struct(name string, value interface{}) error {
 		return nil
 	}
 
-	filterErrors := make([]error, 0)
+	valErrors := make([]error, 0)
 	for _, err := range err.(validator.ValidationErrors) {
-		filterError := &StructValidationError{
-			Filter:   name,
+		valError := &StructValidationError{
+			Struct:   name,
 			Field:    err.Field(),
 			Tag:      err.ActualTag(),
 			Value:    err.Value(),
 			Expected: err.Param(),
 		}
-		filterErrors = append(filterErrors, filterError)
+		valErrors = append(valErrors, valError)
 	}
 
-	return errors.Join(filterErrors...)
+	return errors.Join(valErrors...)
 }
