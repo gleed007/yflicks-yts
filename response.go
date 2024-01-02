@@ -24,15 +24,15 @@ type MovieSuggestionsData struct {
 
 type SearchMoviesResponse struct {
 	BaseResponse
-	Data SearchMoviesData
+	Data SearchMoviesData `json:"data"`
 }
 
 type MovieDetailsResponse struct {
 	BaseResponse
-	Data MovieDetailsData
+	Data MovieDetailsData `json:"data"`
 }
 
 type MovieSuggestionsResponse struct {
 	BaseResponse
-	Data MovieSuggestionsData
+	Data MovieSuggestionsData `json:"data"`
 }
