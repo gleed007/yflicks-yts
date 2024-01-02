@@ -1,13 +1,11 @@
 package yts
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 
+	"github.com/atifcppprogrammer/yflicks-yts/internal/netutils"
 	"github.com/atifcppprogrammer/yflicks-yts/internal/validate"
 )
 
@@ -15,13 +13,12 @@ const APIBaseURL = "https://yts.mx/api/v2"
 
 type Client struct {
 	apiBaseURL string
-	apiClient  *http.Client
 }
 
 type FilterValidationError validate.StructValidationError
 
 func NewClient() *Client {
-	return &Client{APIBaseURL, &http.Client{}}
+	return &Client{APIBaseURL}
 }
 
 func (c Client) SearchMovies(filters *SearchMoviesFilters) (*SearchMoviesResponse, error) {
@@ -32,7 +29,7 @@ func (c Client) SearchMovies(filters *SearchMoviesFilters) (*SearchMoviesRespons
 
 	parsedPayload := &SearchMoviesResponse{}
 	targetURL := c.getEndpointURL("list_movies.json", queryString)
-	err = c.getEndpointPayload(targetURL, parsedPayload)
+	err = netutils.GetPayload(targetURL, parsedPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +45,7 @@ func (c Client) GetMovieDetails(filters *MovieDetailsFilters) (*MovieDetailsResp
 
 	parsedPayload := &MovieDetailsResponse{}
 	targetURL := c.getEndpointURL("movie_details.json", queryString)
-	err = c.getEndpointPayload(targetURL, parsedPayload)
+	err = netutils.GetPayload(targetURL, parsedPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +66,7 @@ func (c Client) GetMovieSuggestions(movieID int) (*MovieSuggestionsResponse, err
 
 	parsedPayload := &MovieSuggestionsResponse{}
 	targetURL := c.getEndpointURL("movie_suggestions.json", queryString)
-	err := c.getEndpointPayload(targetURL, parsedPayload)
+	err := netutils.GetPayload(targetURL, parsedPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -84,24 +81,4 @@ func (c Client) getEndpointURL(path, query string) string {
 	}
 
 	return fmt.Sprintf("%s?%s", targetURL, query)
-}
-
-func (c Client) getEndpointPayload(targetURL string, payload interface{}) error {
-	response, err := c.apiClient.Get(targetURL)
-	if err != nil {
-		return err
-	}
-
-	defer response.Body.Close()
-	rawPayload, err := io.ReadAll(response.Body)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(rawPayload, payload)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
