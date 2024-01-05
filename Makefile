@@ -12,7 +12,7 @@ else
 endif
 
 release: ./scripts/makefile-release.sh
-ifndef version
+ifdef version
 	@./scripts/makefile-release.sh $(version)
 endif
 
