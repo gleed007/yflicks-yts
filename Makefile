@@ -1,4 +1,4 @@
-.PHONY: setup test format
+.PHONY: setup test build format
 
 setup: 
 	@cp githooks/* .git/hooks
@@ -9,6 +9,11 @@ ifeq ($(verbose), true)
 	@go test -v ./...
 else
 	@go test ./...
+endif
+
+release: ./scripts/makefile-release.sh
+ifndef version
+	@./scripts/makefile-release.sh $(version)
 endif
 
 format: 
