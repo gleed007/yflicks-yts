@@ -17,7 +17,6 @@ linters-settings:
         allow:
           - $gostd
           - github.com/go-playground/validator/v10
-          - github.com/atifcppprogrammer/yflicks-yts/internal
   govet:
     check-shadowing: true
   nolintlint:
