@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func getMockBaseResponse() BaseResponse {
@@ -69,9 +70,22 @@ func getTestHandlerFor(pattern string, payload interface{}) *http.ServeMux {
 	return serveMux
 }
 
+func TestNewClient(t *testing.T) {
+	t.Run("panics if provided timeout is not within correct range", func(t *testing.T) {
+		defer func() {
+			expected := errors.New("YTS client timeout must be between 5 and 300 seconds inclusive")
+			received, ok := recover().(error)
+			if !ok || received == nil || received.Error() != expected.Error() {
+				t.Errorf("received error %v, expected %v", received, expected)
+			}
+		}()
+		NewClient(0)
+	})
+}
+
 func TestSearchMovies(t *testing.T) {
 	t.Run("returns error if provided filters result in invalid querystring", func(t *testing.T) {
-		client := NewClient()
+		client := NewClient(time.Minute * 5)
 		filters := DefaultSearchMoviesFilter()
 		expected := &StructValidationError{
 			Struct:   "SearchMoviesFilters",
@@ -120,7 +134,7 @@ func TestSearchMovies(t *testing.T) {
 
 func TestGetMovieDetails(t *testing.T) {
 	t.Run("returns error if provided filters result in invalid querystring", func(t *testing.T) {
-		client := NewClient()
+		client := NewClient(time.Minute * 5)
 		filters := DefaultMovieDetailsFilters(-1)
 		expected := &StructValidationError{
 			Struct:   "MovieDetailsFilters",
@@ -169,7 +183,7 @@ func TestGetMovieDetails(t *testing.T) {
 
 func TestGetMovieSuggestions(t *testing.T) {
 	t.Run("returns error if provided movieID results in invalid querystring", func(t *testing.T) {
-		client := NewClient()
+		client := NewClient(time.Minute * 5)
 		expected := errors.New("provided movieID must be at least 1")
 		_, received := client.GetMovieSuggestions(context.TODO(), -1)
 		if received == nil || received.Error() != expected.Error() {
@@ -201,7 +215,7 @@ func TestGetMovieSuggestions(t *testing.T) {
 }
 
 func TestGetPayload(t *testing.T) {
-	client := NewClient()
+	client := NewClient(time.Minute * 5)
 
 	t.Run("returns error if ill-formed URL provided as argument", func(t *testing.T) {
 		malformedURL := "proto://malformed-url.com"
@@ -236,7 +250,7 @@ func TestGetPayload(t *testing.T) {
 
 func TestGetEndpointURL(t *testing.T) {
 	const targetPath = "list_movies.json"
-	client := NewClient()
+	client := NewClient(time.Minute * 5)
 
 	t.Run("generates correct target URL when empty querystring is provided", func(t *testing.T) {
 		received := client.getEndpointURL(targetPath, "")
