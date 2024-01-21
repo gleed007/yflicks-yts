@@ -1,6 +1,7 @@
 package yts
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,11 @@ import (
 
 	"github.com/atifcppprogrammer/yflicks-yts/internal/validate"
 )
+
+type TestEmployee struct {
+	Name   string `json:"name"`
+	Salary int    `json:"salary"`
+}
 
 func getMockBaseResponse() BaseResponse {
 	return BaseResponse{
@@ -82,7 +88,7 @@ func TestSearchMovies(t *testing.T) {
 			Expected: "1",
 		}
 		filters.Limit = -1
-		_, received := client.SearchMovies(filters)
+		_, received := client.SearchMovies(context.TODO(), filters)
 		if received == nil || received.Error() != expected.Error() {
 			t.Errorf("received error %v, expected %v", received, expected)
 		}
@@ -94,9 +100,9 @@ func TestSearchMovies(t *testing.T) {
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
-		client := Client{server.URL}
+		client := Client{server.URL, &http.Client{}}
 		filters := DefaultSearchMoviesFilter()
-		received, err := client.SearchMovies(filters)
+		received, err := client.SearchMovies(context.TODO(), filters)
 		if err != nil {
 			t.Errorf("received error %s, expected %v", err, nil)
 		}
@@ -130,7 +136,7 @@ func TestGetMovieDetails(t *testing.T) {
 			Value:    -1,
 			Expected: "1",
 		}
-		_, received := client.GetMovieDetails(filters)
+		_, received := client.GetMovieDetails(context.TODO(), filters)
 		if received == nil || received.Error() != expected.Error() {
 			t.Errorf("received error %v, expected %v", received, expected)
 		}
@@ -143,9 +149,9 @@ func TestGetMovieDetails(t *testing.T) {
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
-		client := Client{server.URL}
+		client := Client{server.URL, &http.Client{}}
 		filters := DefaultMovieDetailsFilters(movieID)
-		received, err := client.GetMovieDetails(filters)
+		received, err := client.GetMovieDetails(context.TODO(), filters)
 		if err != nil {
 			t.Errorf("received error %s, expected %v", err, nil)
 		}
@@ -172,7 +178,7 @@ func TestGetMovieSuggestions(t *testing.T) {
 	t.Run("returns error if provided movieID results in invalid querystring", func(t *testing.T) {
 		client := NewClient()
 		expected := errors.New("provided movieID must be at least 1")
-		_, received := client.GetMovieSuggestions(-1)
+		_, received := client.GetMovieSuggestions(context.TODO(), -1)
 		if received == nil || received.Error() != expected.Error() {
 			t.Errorf("received error %v, expected %v", received, expected)
 		}
@@ -185,8 +191,8 @@ func TestGetMovieSuggestions(t *testing.T) {
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
-		client := Client{server.URL}
-		received, err := client.GetMovieSuggestions(movieID)
+		client := Client{server.URL, &http.Client{}}
+		received, err := client.GetMovieSuggestions(context.TODO(), movieID)
 		if err != nil {
 			t.Errorf("received error %s, expected %v", err, nil)
 		}
@@ -197,6 +203,40 @@ func TestGetMovieSuggestions(t *testing.T) {
 				received.Data.MovieCount,
 				expected.Data.MovieCount,
 			)
+		}
+	})
+}
+
+func TestGetPayload(t *testing.T) {
+	client := NewClient()
+
+	t.Run("returns error if ill-formed URL provided as argument", func(t *testing.T) {
+		malformedURL := "proto://malformed-url.com"
+		received := client.getPayload(context.TODO(), malformedURL, struct{}{})
+		expected := fmt.Errorf(`Get "%s": unsupported protocol scheme "proto"`, malformedURL)
+		if received == nil || received.Error() != expected.Error() {
+			t.Errorf("received error %s, expected %s", received, expected)
+		}
+	})
+
+	t.Run("populates passed struct with response payload from server endpoint", func(t *testing.T) {
+		expected := TestEmployee{"employee", 5000}
+		handler := getTestHandlerFor("/", expected)
+		server := httptest.NewServer(handler)
+		defer server.Close()
+
+		received := TestEmployee{}
+		err := client.getPayload(context.TODO(), server.URL, &received)
+		if err != nil {
+			t.Errorf("received error %s, expected %v", err, nil)
+		}
+
+		if received.Name != expected.Name {
+			t.Errorf("received name %s, expected %s", received.Name, expected.Name)
+		}
+
+		if received.Salary != expected.Salary {
+			t.Errorf("received salary %d, expected %d", received.Salary, expected.Salary)
 		}
 	})
 }
