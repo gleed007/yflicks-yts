@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"testing"
-
-	"github.com/atifcppprogrammer/yflicks-yts/internal/validate"
 )
 
 func TestSearchMoviesGetQueryString(t *testing.T) {
@@ -21,42 +19,42 @@ func TestSearchMoviesGetQueryString(t *testing.T) {
 	t.Run("returns joined StructValidation errors when field validations fail", func(t *testing.T) {
 		emptyFilters := &SearchMoviesFilters{}
 		valErrors := []error{
-			&validate.StructValidationError{
+			&StructValidationError{
 				Struct:   "SearchMoviesFilters",
 				Field:    "Limit",
 				Tag:      "min",
 				Value:    0,
 				Expected: "1",
 			},
-			&validate.StructValidationError{
+			&StructValidationError{
 				Struct:   "SearchMoviesFilters",
 				Field:    "Page",
 				Tag:      "min",
 				Value:    0,
 				Expected: "1",
 			},
-			&validate.StructValidationError{
+			&StructValidationError{
 				Struct:   "SearchMoviesFilters",
 				Field:    "Quality",
 				Tag:      "oneof",
 				Value:    "",
 				Expected: "all 480p 720p 1080p 1080p.x265 2160p 3D",
 			},
-			&validate.StructValidationError{
+			&StructValidationError{
 				Struct:   "SearchMoviesFilters",
 				Field:    "Genre",
 				Tag:      "oneof",
 				Value:    "",
 				Expected: "all action adventure animation biography comedy crime documentary drama family fantasy film-noir game-show history horror music musical mystery news reality-tv romance sci-fi sport talk-show thriller war western",
 			},
-			&validate.StructValidationError{
+			&StructValidationError{
 				Struct:   "SearchMoviesFilters",
 				Field:    "SortBy",
 				Tag:      "oneof",
 				Value:    "",
 				Expected: "title year rating peers seeds download_count like_count date_added",
 			},
-			&validate.StructValidationError{
+			&StructValidationError{
 				Struct:   "SearchMoviesFilters",
 				Field:    "OrderBy",
 				Tag:      "oneof",

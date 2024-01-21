@@ -8,14 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/atifcppprogrammer/yflicks-yts/internal/validate"
 )
-
-type TestEmployee struct {
-	Name   string `json:"name"`
-	Salary int    `json:"salary"`
-}
 
 func getMockBaseResponse() BaseResponse {
 	return BaseResponse{
@@ -80,7 +73,7 @@ func TestSearchMovies(t *testing.T) {
 	t.Run("returns error if provided filters result in invalid querystring", func(t *testing.T) {
 		client := NewClient()
 		filters := DefaultSearchMoviesFilter()
-		expected := &validate.StructValidationError{
+		expected := &StructValidationError{
 			Struct:   "SearchMoviesFilters",
 			Field:    "Limit",
 			Tag:      "min",
@@ -129,7 +122,7 @@ func TestGetMovieDetails(t *testing.T) {
 	t.Run("returns error if provided filters result in invalid querystring", func(t *testing.T) {
 		client := NewClient()
 		filters := DefaultMovieDetailsFilters(-1)
-		expected := &validate.StructValidationError{
+		expected := &StructValidationError{
 			Struct:   "MovieDetailsFilters",
 			Field:    "MovieID",
 			Tag:      "min",

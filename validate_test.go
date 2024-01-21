@@ -1,4 +1,4 @@
-package validate
+package yts
 
 import (
 	"errors"
@@ -10,10 +10,10 @@ type TestEmployee struct {
 	Salary int    `validate:"min=1,max=5000"`
 }
 
-func TestStruct(t *testing.T) {
+func TestValidateStruct(t *testing.T) {
 	t.Run("returns nil if all struct fields pass stipulated validations", func(t *testing.T) {
 		employee := TestEmployee{"ytswatcher", 5000}
-		received := Struct("TestEmployee", &employee)
+		received := validateStruct("TestEmployee", &employee)
 		if received != nil {
 			t.Errorf(`received %v, but expected "%s"`, nil, received)
 		}
@@ -38,7 +38,7 @@ func TestStruct(t *testing.T) {
 		}
 
 		expected := errors.Join(valErrors...)
-		received := Struct("TestEmployee", &TestEmployee{})
+		received := validateStruct("TestEmployee", &TestEmployee{})
 		if received == nil || received.Error() != expected.Error() {
 			t.Errorf(`received %s, but expected "%s"`, received, expected)
 		}
