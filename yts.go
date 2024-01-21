@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 const APIBaseURL = "https://yts.mx/api/v2"
@@ -17,8 +18,12 @@ type Client struct {
 	netClient *http.Client
 }
 
-func NewClient() *Client {
-	return &Client{APIBaseURL, &http.Client{}}
+func NewClient(timeout time.Duration) *Client {
+	if timeout < time.Second*5 || time.Minute*5 < timeout {
+		panic(errors.New("YTS client timeout must be between 5 and 300 seconds inclusive"))
+	}
+
+	return &Client{APIBaseURL, &http.Client{Timeout: timeout}}
 }
 
 func (c Client) SearchMovies(ctx context.Context, filters *SearchMoviesFilters) (*SearchMoviesResponse, error) {
