@@ -11,9 +11,12 @@ else
 	@go test ./...
 endif
 
-release: ./scripts/makefile-release.sh
+release:
 ifdef version
-	@./scripts/makefile-release.sh $(version)
+	@git-chglog --next-tag $(version) --output CHANGELOG.md
+	@git add CHANGELOG.md
+	@git commit -m "chore(release): v$(version)"
+	@git tag -sa -m "yflicks-yts-$(version)" v$(version)
 endif
 
 format: 
