@@ -13,8 +13,8 @@ import (
 const APIBaseURL = "https://yts.mx/api/v2"
 
 type Client struct {
-	apiBaseURL    string
-	apiHTTPClient *http.Client
+	baseURL   string
+	netClient *http.Client
 }
 
 func NewClient() *Client {
@@ -86,7 +86,7 @@ func (c Client) getPayload(ctx context.Context, targetURL string, payload interf
 		return err
 	}
 
-	response, err := c.apiHTTPClient.Do(request)
+	response, err := c.netClient.Do(request)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func (c Client) getPayload(ctx context.Context, targetURL string, payload interf
 }
 
 func (c Client) getEndpointURL(path, query string) string {
-	targetURL := fmt.Sprintf("%s/%s", c.apiBaseURL, path)
+	targetURL := fmt.Sprintf("%s/%s", c.baseURL, path)
 	if query == "" {
 		return targetURL
 	}
