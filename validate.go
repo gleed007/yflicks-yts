@@ -1,4 +1,4 @@
-package validate
+package yts
 
 import (
 	"errors"
@@ -32,7 +32,7 @@ func (e *StructValidationError) Error() string {
 	)
 }
 
-func Struct(name string, value interface{}) error {
+func validateStruct(name string, value interface{}) error {
 	err := validate.Struct(value)
 	if err == nil {
 		return nil

@@ -3,8 +3,6 @@ package yts
 import (
 	"fmt"
 	"net/url"
-
-	"github.com/atifcppprogrammer/yflicks-yts/internal/validate"
 )
 
 type SearchMoviesFilters struct {
@@ -53,7 +51,7 @@ func DefaultMovieDetailsFilters(movieID int) *MovieDetailsFilters {
 }
 
 func (f *SearchMoviesFilters) getQueryString() (string, error) {
-	if err := validate.Struct("SearchMoviesFilters", f); err != nil {
+	if err := validateStruct("SearchMoviesFilters", f); err != nil {
 		return "", err
 	}
 
@@ -93,7 +91,7 @@ func (f *SearchMoviesFilters) getQueryString() (string, error) {
 }
 
 func (f *MovieDetailsFilters) getQueryString() (string, error) {
-	if err := validate.Struct("MovieDetailsFilters", f); err != nil {
+	if err := validateStruct("MovieDetailsFilters", f); err != nil {
 		return "", err
 	}
 

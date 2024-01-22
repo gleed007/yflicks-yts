@@ -1,14 +1,14 @@
 package yts
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/atifcppprogrammer/yflicks-yts/internal/validate"
+	"time"
 )
 
 func getMockBaseResponse() BaseResponse {
@@ -70,11 +70,24 @@ func getTestHandlerFor(pattern string, payload interface{}) *http.ServeMux {
 	return serveMux
 }
 
+func TestNewClient(t *testing.T) {
+	t.Run("panics if provided timeout is not within correct range", func(t *testing.T) {
+		defer func() {
+			expected := errors.New("YTS client timeout must be between 5 and 300 seconds inclusive")
+			received, ok := recover().(error)
+			if !ok || received == nil || received.Error() != expected.Error() {
+				t.Errorf("received error %v, expected %v", received, expected)
+			}
+		}()
+		NewClient(0)
+	})
+}
+
 func TestSearchMovies(t *testing.T) {
 	t.Run("returns error if provided filters result in invalid querystring", func(t *testing.T) {
-		client := NewClient()
+		client := NewClient(time.Minute * 5)
 		filters := DefaultSearchMoviesFilter()
-		expected := &validate.StructValidationError{
+		expected := &StructValidationError{
 			Struct:   "SearchMoviesFilters",
 			Field:    "Limit",
 			Tag:      "min",
@@ -82,7 +95,7 @@ func TestSearchMovies(t *testing.T) {
 			Expected: "1",
 		}
 		filters.Limit = -1
-		_, received := client.SearchMovies(filters)
+		_, received := client.SearchMovies(context.TODO(), filters)
 		if received == nil || received.Error() != expected.Error() {
 			t.Errorf("received error %v, expected %v", received, expected)
 		}
@@ -94,9 +107,9 @@ func TestSearchMovies(t *testing.T) {
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
-		client := Client{server.URL}
+		client := Client{server.URL, &http.Client{}}
 		filters := DefaultSearchMoviesFilter()
-		received, err := client.SearchMovies(filters)
+		received, err := client.SearchMovies(context.TODO(), filters)
 		if err != nil {
 			t.Errorf("received error %s, expected %v", err, nil)
 		}
@@ -121,16 +134,16 @@ func TestSearchMovies(t *testing.T) {
 
 func TestGetMovieDetails(t *testing.T) {
 	t.Run("returns error if provided filters result in invalid querystring", func(t *testing.T) {
-		client := NewClient()
+		client := NewClient(time.Minute * 5)
 		filters := DefaultMovieDetailsFilters(-1)
-		expected := &validate.StructValidationError{
+		expected := &StructValidationError{
 			Struct:   "MovieDetailsFilters",
 			Field:    "MovieID",
 			Tag:      "min",
 			Value:    -1,
 			Expected: "1",
 		}
-		_, received := client.GetMovieDetails(filters)
+		_, received := client.GetMovieDetails(context.TODO(), filters)
 		if received == nil || received.Error() != expected.Error() {
 			t.Errorf("received error %v, expected %v", received, expected)
 		}
@@ -143,9 +156,9 @@ func TestGetMovieDetails(t *testing.T) {
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
-		client := Client{server.URL}
+		client := Client{server.URL, &http.Client{}}
 		filters := DefaultMovieDetailsFilters(movieID)
-		received, err := client.GetMovieDetails(filters)
+		received, err := client.GetMovieDetails(context.TODO(), filters)
 		if err != nil {
 			t.Errorf("received error %s, expected %v", err, nil)
 		}
@@ -170,9 +183,9 @@ func TestGetMovieDetails(t *testing.T) {
 
 func TestGetMovieSuggestions(t *testing.T) {
 	t.Run("returns error if provided movieID results in invalid querystring", func(t *testing.T) {
-		client := NewClient()
+		client := NewClient(time.Minute * 5)
 		expected := errors.New("provided movieID must be at least 1")
-		_, received := client.GetMovieSuggestions(-1)
+		_, received := client.GetMovieSuggestions(context.TODO(), -1)
 		if received == nil || received.Error() != expected.Error() {
 			t.Errorf("received error %v, expected %v", received, expected)
 		}
@@ -185,8 +198,8 @@ func TestGetMovieSuggestions(t *testing.T) {
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
-		client := Client{server.URL}
-		received, err := client.GetMovieSuggestions(movieID)
+		client := Client{server.URL, &http.Client{}}
+		received, err := client.GetMovieSuggestions(context.TODO(), movieID)
 		if err != nil {
 			t.Errorf("received error %s, expected %v", err, nil)
 		}
@@ -201,9 +214,43 @@ func TestGetMovieSuggestions(t *testing.T) {
 	})
 }
 
+func TestGetPayload(t *testing.T) {
+	client := NewClient(time.Minute * 5)
+
+	t.Run("returns error if ill-formed URL provided as argument", func(t *testing.T) {
+		malformedURL := "proto://malformed-url.com"
+		received := client.getPayload(context.TODO(), malformedURL, struct{}{})
+		expected := fmt.Errorf(`Get "%s": unsupported protocol scheme "proto"`, malformedURL)
+		if received == nil || received.Error() != expected.Error() {
+			t.Errorf("received error %s, expected %s", received, expected)
+		}
+	})
+
+	t.Run("populates passed struct with response payload from server endpoint", func(t *testing.T) {
+		expected := TestEmployee{"employee", 5000}
+		handler := getTestHandlerFor("/", expected)
+		server := httptest.NewServer(handler)
+		defer server.Close()
+
+		received := TestEmployee{}
+		err := client.getPayload(context.TODO(), server.URL, &received)
+		if err != nil {
+			t.Errorf("received error %s, expected %v", err, nil)
+		}
+
+		if received.Name != expected.Name {
+			t.Errorf("received name %s, expected %s", received.Name, expected.Name)
+		}
+
+		if received.Salary != expected.Salary {
+			t.Errorf("received salary %d, expected %d", received.Salary, expected.Salary)
+		}
+	})
+}
+
 func TestGetEndpointURL(t *testing.T) {
 	const targetPath = "list_movies.json"
-	client := NewClient()
+	client := NewClient(time.Minute * 5)
 
 	t.Run("generates correct target URL when empty querystring is provided", func(t *testing.T) {
 		received := client.getEndpointURL(targetPath, "")
