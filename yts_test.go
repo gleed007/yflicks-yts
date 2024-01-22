@@ -59,7 +59,50 @@ func getMockMovieSuggestionsResponse() MovieSuggestionsResponse {
 	}
 }
 
-func getTestHandlerFor(pattern string, payload interface{}) *http.ServeMux {
+func getMockTrendingMoviesResponse() string {
+	return `
+	  <div class="main-content">
+			<div class="browse-content">
+				<div class="container">
+				  <section>
+						<div class="row">
+						<div class="browse-movie-wrap col-xs-10 col-sm-4 col-md-5 col-lg-4">
+							<a class="browse-movie-link" href="https://yts.mx/movies/superbad-2007">
+							  <figure>
+									<img class="img-responsive" src="/assets/images/movies/Superbad_2007/medium-cover.jpg" alt="Superbad (2007) download" width="170" height="255">
+									<figcaption class="hidden-xs hidden-sm">
+										<span class="icon-star"></span>
+										<h4 class="rating">7.6 / 10</h4>
+										<h4>Action</h4>
+										<h4>Comedy</h4>
+										<span class="button-green-download2-big">View Details</span>
+									</figcaption>
+								</figure>
+								</a>
+								<div class="browse-movie-bottom">
+									<a class="browse-movie-title" href="https://yts.mx/movies/superbad-2007">Superbad</a>
+									<div class="browse-movie-year">2007</div>
+								</div>
+							</div>
+						</div>
+					</section>
+				</div>
+			</div>
+		</div>
+	`
+}
+
+func getTestHandler(pattern string, payload []byte) *http.ServeMux {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "%s", string(payload))
+	}
+
+	serveMux := &http.ServeMux{}
+	serveMux.HandleFunc(pattern, handler)
+	return serveMux
+}
+
+func getTestHandlerJSON(pattern string, payload interface{}) *http.ServeMux {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		serialized, _ := json.Marshal(payload)
 		fmt.Fprintf(w, "%s", serialized)
@@ -103,7 +146,7 @@ func TestSearchMovies(t *testing.T) {
 
 	t.Run("returns parsed SearchMoviesResponse from list_movies.json endpoint", func(t *testing.T) {
 		expected := getMockSearchMoviesResponse()
-		handler := getTestHandlerFor("/list_movies.json", expected)
+		handler := getTestHandlerJSON("/list_movies.json", expected)
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
@@ -152,7 +195,7 @@ func TestGetMovieDetails(t *testing.T) {
 	t.Run("returns parsed MovieDetailsResponse from movie_details.json endpoint", func(t *testing.T) {
 		const movieID = 1
 		expected := getMockMovieDetailsResponse(movieID)
-		handler := getTestHandlerFor("/movie_details.json", expected)
+		handler := getTestHandlerJSON("/movie_details.json", expected)
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
@@ -194,7 +237,7 @@ func TestGetMovieSuggestions(t *testing.T) {
 	t.Run("returns parsed MovieSuggestionsResponse from movie_suggestions.json endpoint", func(t *testing.T) {
 		const movieID = 1
 		expected := getMockMovieSuggestionsResponse()
-		handler := getTestHandlerFor("/movie_suggestions.json", expected)
+		handler := getTestHandlerJSON("/movie_suggestions.json", expected)
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
@@ -214,11 +257,76 @@ func TestGetMovieSuggestions(t *testing.T) {
 	})
 }
 
+func TestGetTrendingMovies(t *testing.T) {
+	t.Run("returns error if movie containing element is not found in document", func(t *testing.T) {
+		payload := `<div>error-document</div>`
+		handler := getTestHandler("/trending-movies", []byte(payload))
+		server := httptest.NewServer(handler)
+		defer server.Close()
+
+		client := Client{server.URL, server.URL, &http.Client{}}
+		_, received := client.GetTrendingMovies(context.TODO())
+		expected := errors.New("no selections found for trending movies")
+		if received == nil || received.Error() != expected.Error() {
+			t.Errorf(`received error %v, but expected error "%v"`, received, expected)
+		}
+	})
+
+	t.Run("returns parsed TrendingMoviesResponse from scraping YTS trending page", func(t *testing.T) {
+		payload := getMockTrendingMoviesResponse()
+		handler := getTestHandler("/trending-movies", []byte(payload))
+		server := httptest.NewServer(handler)
+		defer server.Close()
+
+		client := Client{server.URL, server.URL, &http.Client{}}
+		received, err := client.GetTrendingMovies(context.TODO())
+		expected := TrendingMoviesResponse{
+			Data: TrendingMoviesData{
+				Movies: []TrendingMovie{{
+					Title:  "Superbad",
+					Year:   2007,
+					Link:   "https://yts.mx/movies/superbad-2007",
+					Image:  "/assets/images/movies/Superbad_2007/medium-cover.jpg",
+					Rating: "7.6 / 10",
+				}},
+			},
+		}
+
+		if err != nil {
+			t.Errorf("received error %s, expected %v", err, nil)
+		}
+
+		if len(received.Data.Movies) != 1 {
+			t.Errorf(
+				"received movie count %d, expected %d",
+				len(received.Data.Movies),
+				1,
+			)
+		}
+
+		if received.Data.Movies[0].Title != expected.Data.Movies[0].Title {
+			t.Errorf(
+				"received title %s, expected title %s",
+				received.Data.Movies[0].Title,
+				expected.Data.Movies[0].Title,
+			)
+		}
+
+		if received.Data.Movies[0].Rating != expected.Data.Movies[0].Rating {
+			t.Errorf(
+				"received rating %s, expected rating %s",
+				received.Data.Movies[0].Rating,
+				expected.Data.Movies[0].Rating,
+			)
+		}
+	})
+}
+
 func TestGetPayloadJSON(t *testing.T) {
 	client := NewClient(time.Minute * 5)
 	t.Run("populates passed struct with response payload from server endpoint", func(t *testing.T) {
 		expected := TestEmployee{"employee", 5000}
-		handler := getTestHandlerFor("/", expected)
+		handler := getTestHandlerJSON("/", expected)
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
@@ -252,7 +360,7 @@ func TestGetPayloadRaw(t *testing.T) {
 
 	t.Run("returns raw response from server as bytes", func(t *testing.T) {
 		payload := TestEmployee{"employee", 5000}
-		handler := getTestHandlerFor("/", payload)
+		handler := getTestHandlerJSON("/", payload)
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
