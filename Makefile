@@ -13,7 +13,7 @@ endif
 
 release:
 ifdef version
-	@git-chglog --next-tag $(version) --output CHANGELOG.md
+	@git-chglog --next-tag v$(version) --output CHANGELOG.md
 	@git add CHANGELOG.md
 	@git commit -m "chore(release): v$(version)"
 	@git tag -sa -m "yflicks-yts-$(version)" v$(version)
