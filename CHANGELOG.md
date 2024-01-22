@@ -1,7 +1,24 @@
 # Changelog
 
-<a name="0.6.0"></a>
-## 0.6.0 (2024-01-16)
+<a name="v0.7.0"></a>
+## [v0.7.0](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.6.0...v0.7.0) (2024-01-22)
+
+### Feat
+
+* **client:** requiring request timeout for client
+* **client:** updated methods to require `context.Context` argument
+
+### Refactor
+
+* moved `internal/validate` package into `yts` package
+
+### Pull Requests
+
+* Merge pull request [#4](https://github.com/atifcppprogrammer/yflicks-yts/issues/4) from atifcppprogrammer/feature/ctx-support
+
+
+<a name="v0.6.0"></a>
+## v0.6.0 (2024-01-16)
 
 ### Feat
 
