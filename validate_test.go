@@ -6,8 +6,8 @@ import (
 )
 
 type TestEmployee struct {
-	Name   string `validate:"required"`
-	Salary int    `validate:"min=1,max=5000"`
+	Name   string `json:"name"   validate:"required"`
+	Salary int    `json:"salary" validate:"min=1,max=5000"`
 }
 
 func TestValidateStruct(t *testing.T) {

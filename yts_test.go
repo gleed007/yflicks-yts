@@ -107,7 +107,7 @@ func TestSearchMovies(t *testing.T) {
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
-		client := Client{server.URL, &http.Client{}}
+		client := Client{server.URL, SiteURL, &http.Client{}}
 		filters := DefaultSearchMoviesFilter()
 		received, err := client.SearchMovies(context.TODO(), filters)
 		if err != nil {
@@ -156,7 +156,7 @@ func TestGetMovieDetails(t *testing.T) {
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
-		client := Client{server.URL, &http.Client{}}
+		client := Client{server.URL, SiteURL, &http.Client{}}
 		filters := DefaultMovieDetailsFilters(movieID)
 		received, err := client.GetMovieDetails(context.TODO(), filters)
 		if err != nil {
@@ -198,7 +198,7 @@ func TestGetMovieSuggestions(t *testing.T) {
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
-		client := Client{server.URL, &http.Client{}}
+		client := Client{server.URL, SiteURL, &http.Client{}}
 		received, err := client.GetMovieSuggestions(context.TODO(), movieID)
 		if err != nil {
 			t.Errorf("received error %s, expected %v", err, nil)
@@ -214,18 +214,8 @@ func TestGetMovieSuggestions(t *testing.T) {
 	})
 }
 
-func TestGetPayload(t *testing.T) {
+func TestGetPayloadJSON(t *testing.T) {
 	client := NewClient(time.Minute * 5)
-
-	t.Run("returns error if ill-formed URL provided as argument", func(t *testing.T) {
-		malformedURL := "proto://malformed-url.com"
-		received := client.getPayload(context.TODO(), malformedURL, struct{}{})
-		expected := fmt.Errorf(`Get "%s": unsupported protocol scheme "proto"`, malformedURL)
-		if received == nil || received.Error() != expected.Error() {
-			t.Errorf("received error %s, expected %s", received, expected)
-		}
-	})
-
 	t.Run("populates passed struct with response payload from server endpoint", func(t *testing.T) {
 		expected := TestEmployee{"employee", 5000}
 		handler := getTestHandlerFor("/", expected)
@@ -233,7 +223,7 @@ func TestGetPayload(t *testing.T) {
 		defer server.Close()
 
 		received := TestEmployee{}
-		err := client.getPayload(context.TODO(), server.URL, &received)
+		err := client.getPayloadJSON(context.TODO(), server.URL, &received)
 		if err != nil {
 			t.Errorf("received error %s, expected %v", err, nil)
 		}
@@ -244,6 +234,37 @@ func TestGetPayload(t *testing.T) {
 
 		if received.Salary != expected.Salary {
 			t.Errorf("received salary %d, expected %d", received.Salary, expected.Salary)
+		}
+	})
+}
+
+func TestGetPayloadRaw(t *testing.T) {
+	client := NewClient(time.Minute * 5)
+
+	t.Run("returns error if ill-formed URL provided as argument", func(t *testing.T) {
+		malformedURL := "proto://malformed-url.com"
+		received := client.getPayloadJSON(context.TODO(), malformedURL, struct{}{})
+		expected := fmt.Errorf(`Get "%s": unsupported protocol scheme "proto"`, malformedURL)
+		if received == nil || received.Error() != expected.Error() {
+			t.Errorf("received error %s, expected %s", received, expected)
+		}
+	})
+
+	t.Run("returns raw response from server as bytes", func(t *testing.T) {
+		payload := TestEmployee{"employee", 5000}
+		handler := getTestHandlerFor("/", payload)
+		server := httptest.NewServer(handler)
+		defer server.Close()
+
+		rawPayload, err := client.getPayloadRaw(context.TODO(), server.URL)
+		expected := `{"name":"employee","salary":5000}`
+		received := string(rawPayload)
+		if err != nil {
+			t.Errorf("received error %s, expected %v", err, nil)
+		}
+
+		if received != expected {
+			t.Errorf(`received %s, but expected "%s"`, received, expected)
 		}
 	})
 }
