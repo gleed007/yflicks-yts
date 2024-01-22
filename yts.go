@@ -38,7 +38,9 @@ func NewClient(timeout time.Duration) *Client {
 	}
 }
 
-func (c Client) SearchMovies(ctx context.Context, filters *SearchMoviesFilters) (*SearchMoviesResponse, error) {
+func (c Client) SearchMovies(ctx context.Context, filters *SearchMoviesFilters) (
+	*SearchMoviesResponse, error,
+) {
 	queryString, err := filters.getQueryString()
 	if err != nil {
 		return nil, err
@@ -54,7 +56,9 @@ func (c Client) SearchMovies(ctx context.Context, filters *SearchMoviesFilters) 
 	return parsedPayload, nil
 }
 
-func (c Client) GetMovieDetails(ctx context.Context, filters *MovieDetailsFilters) (*MovieDetailsResponse, error) {
+func (c Client) GetMovieDetails(ctx context.Context, filters *MovieDetailsFilters) (
+	*MovieDetailsResponse, error,
+) {
 	queryString, err := filters.getQueryString()
 	if err != nil {
 		return nil, err
@@ -70,7 +74,9 @@ func (c Client) GetMovieDetails(ctx context.Context, filters *MovieDetailsFilter
 	return parsedPayload, nil
 }
 
-func (c Client) GetMovieSuggestions(ctx context.Context, movieID int) (*MovieSuggestionsResponse, error) {
+func (c Client) GetMovieSuggestions(ctx context.Context, movieID int) (
+	*MovieSuggestionsResponse, error,
+) {
 	if movieID <= 0 {
 		return nil, errors.New("provided movieID must be at least 1")
 	}
@@ -91,7 +97,9 @@ func (c Client) GetMovieSuggestions(ctx context.Context, movieID int) (*MovieSug
 	return parsedPayload, nil
 }
 
-func (c Client) GetTrendingMovies(ctx context.Context) (*TrendingMoviesResponse, error) {
+func (c Client) GetTrendingMovies(ctx context.Context) (
+	*TrendingMoviesResponse, error,
+) {
 	var rawPayload []byte
 	pageURL := fmt.Sprintf("%s/trending-movies", c.siteURL)
 	rawPayload, err := c.getPayloadRaw(ctx, pageURL)
@@ -139,7 +147,9 @@ func (c Client) GetTrendingMovies(ctx context.Context) (*TrendingMoviesResponse,
 	return response, nil
 }
 
-func (c Client) getPayloadJSON(ctx context.Context, targetURL string, payload interface{}) error {
+func (c Client) getPayloadJSON(
+	ctx context.Context, targetURL string, payload interface{},
+) error {
 	rawPayload, err := c.getPayloadRaw(ctx, targetURL)
 	if err != nil {
 		return err
@@ -153,7 +163,9 @@ func (c Client) getPayloadJSON(ctx context.Context, targetURL string, payload in
 	return nil
 }
 
-func (c Client) getPayloadRaw(ctx context.Context, targetURL string) ([]byte, error) {
+func (c Client) getPayloadRaw(ctx context.Context, targetURL string) (
+	[]byte, error,
+) {
 	parsedURL, err := url.Parse(targetURL)
 	if err != nil {
 		return nil, err
