@@ -2,10 +2,12 @@ module github.com/atifcppprogrammer/yflicks-yts
 
 go 1.21.5
 
-require github.com/go-playground/validator/v10 v10.16.0
+require (
+	github.com/PuerkitoBio/goquery v1.8.1
+	github.com/go-playground/validator/v10 v10.16.0
+)
 
 require (
-	github.com/PuerkitoBio/goquery v1.8.1 // indirect
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
