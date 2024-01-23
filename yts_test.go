@@ -92,6 +92,82 @@ func getMockTrendingMoviesResponse() string {
 	`
 }
 
+func getMockHomePageContentResponse() string {
+	return `
+		<div class="main-content">
+      <div class="container home-content">
+        <div id="popular-downloads">
+          <div class="row">
+            <div class="browse-movie-wrap col-xs-10 col-sm-5">
+              <a href="https://yts.mx/movies/migration-2023" class="browse-movie-link">
+              <figure>
+                <img class="img-responsive" src="/assets/images/movies/migration_2023/medium-cover.jpg" alt="Migration (2023) download" width="210" height="315">
+                <figcaption class="hidden-xs hidden-sm">
+                  <h4 class="rating">6.8 / 10</h4>
+                  <h4>Action</h4>
+                  <h4>Adventure</h4><span class="button-green-download2-big">View Details</span>
+                </figcaption>
+              </figure></a>
+              <div class="browse-movie-bottom">
+                <a href="https://yts.mx/movies/migration-2023" class="browse-movie-title">Migration</a>
+                <div class="browse-movie-year">
+                  2023
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="content-dark">
+        <div class="container home-content">
+          <div class="home-movies">
+            <div class="row">
+              <div class="browse-movie-wrap col-xs-10 col-sm-5">
+                <a href="https://yts.mx/movies/het-einde-van-de-reis-1981" class="browse-movie-link">
+                <figure>
+                  <img class="img-responsive" src="/assets/images/movies/het_einde_van_de_reis_1981/medium-cover.jpg" alt="Het einde van de reis (1981) download" width="210" height="315"> <img class="quality-banner img-responsive" src="/assets/images/website/banner720p.png" alt="Het einde van de reis (1981) download 720p" width="118" height="91">
+                  <figcaption class="hidden-xs hidden-sm">
+                    <h4 class="rating">5.3 / 10</h4>
+                    <h4>Action</h4><span class="button-green-download2-big">View Details</span>
+                  </figcaption>
+                </figure></a>
+                <div class="browse-movie-bottom">
+                  <a href="https://yts.mx/movies/het-einde-van-de-reis-1981" class="browse-movie-title"><span style="color: rgb(172, 215, 222); font-size: 75%;">[NL]</span> Het einde van de reis</a>
+                  <div class="browse-movie-year">
+                    1981
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="container home-content">
+        <div class="home-movies">
+          <div class="row">
+            <div class="browse-movie-wrap col-xs-10 col-sm-5">
+              <a href="https://www.imdb.com/title/tt0101507/" target="_blank" class="browse-movie-link">
+              <figure>
+                <img class="img-responsive" src="/assets/images/movies/Boyz_n_the_Hood_1991/medium-cover.jpg" alt="Boyz n the Hood (1991)" width="210" height="315">
+                <figcaption class="hidden-xs hidden-sm imdb-upcoming">
+                  <span class="button-green-download2-big button-yellow-download-big">View IMDb</span>
+                </figcaption>
+              </figure></a>
+              <div class="browse-movie-bottom">
+                <a href="https://www.imdb.com/title/tt0101507/" target="_blank" class="browse-movie-title">Boyz n the Hood</a>
+                <div class="browse-movie-year">
+                  1991<br>
+                  <progress value="28" max="100" style="width: 73%;"></progress> 2160p
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+		</div>
+	`
+}
+
 func getTestHandler(pattern string, payload []byte) *http.ServeMux {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%s", string(payload))
@@ -317,6 +393,188 @@ func TestGetTrendingMovies(t *testing.T) {
 				"received rating %s, expected rating %s",
 				received.Data.Movies[0].Rating,
 				expected.Data.Movies[0].Rating,
+			)
+		}
+	})
+}
+
+func TestGetHomePageContent(t *testing.T) {
+	t.Run("returns error if no popular movie containing element is found in document", func(t *testing.T) {
+		payload := `<div>error-document</div>`
+		handler := getTestHandler("/", []byte(payload))
+		server := httptest.NewServer(handler)
+		defer server.Close()
+
+		client := Client{server.URL, server.URL, &http.Client{}}
+		_, received := client.GetHomePageContent(context.TODO())
+		expected := errors.New("no elements found for popular movies selection")
+		if received == nil || received.Error() != expected.Error() {
+			t.Errorf(`received error %v, but expected error "%v"`, received, expected)
+		}
+	})
+
+	t.Run("returns error if no latest movie torrent containing element is found in document", func(t *testing.T) {
+		payload := `
+      <div>
+				<div id="popular-downloads">
+					<div class="browse-movie-wrap"></div>
+				</div>
+      </div>
+		`
+		handler := getTestHandler("/", []byte(payload))
+		server := httptest.NewServer(handler)
+		defer server.Close()
+
+		client := Client{server.URL, server.URL, &http.Client{}}
+		_, received := client.GetHomePageContent(context.TODO())
+		expected := errors.New("no elements found for latest torrents selection")
+		if received == nil || received.Error() != expected.Error() {
+			t.Errorf(`received error %v, but expected error "%v"`, received, expected)
+		}
+	})
+
+	t.Run("returns error if no latest movie torrent containing element is found in document", func(t *testing.T) {
+		payload := `
+			<div>
+			  <div id="popular-downloads">
+				  <div class="browse-movie-wrap"></div>
+				</div>
+			  <div class="content-dark">
+				  <div class="home-movies">
+						<div class="browse-movie-wrap"></div>
+					</div>
+				</div>
+			</div>
+		`
+		handler := getTestHandler("/", []byte(payload))
+		server := httptest.NewServer(handler)
+		defer server.Close()
+
+		client := Client{server.URL, server.URL, &http.Client{}}
+		_, received := client.GetHomePageContent(context.TODO())
+		expected := errors.New("no elements found for upcoming movies selection")
+		if received == nil || received.Error() != expected.Error() {
+			t.Errorf(`received error %v, but expected error "%v"`, received, expected)
+		}
+	})
+
+	t.Run("returns parsed HomePageContentResponse pfrom scraping YTS home page", func(t *testing.T) {
+		payload := getMockHomePageContentResponse()
+		handler := getTestHandler("/", []byte(payload))
+		server := httptest.NewServer(handler)
+		defer server.Close()
+
+		client := Client{server.URL, server.URL, &http.Client{}}
+		received, err := client.GetHomePageContent(context.TODO())
+		expected := HomePageContentResponse{
+			Data: HomePageContentData{
+				Popular: []ScrapedMovie{{
+					Title:  "Migration",
+					Year:   2023,
+					Link:   "https://yts.mx/movies/migration-2023",
+					Image:  "/assets/images/movies/migration_2023/medium-cover.jpg",
+					Rating: "6.8 / 10",
+				}},
+				Latest: []ScrapedMovie{{
+					Title:  "[NL] Het einde van de reis",
+					Year:   1981,
+					Link:   "https://yts.mx/movies/het-einde-van-de-reis-1981",
+					Image:  "/assets/images/movies/het_einde_van_de_reis_1981/medium-cover.jpg",
+					Rating: "5.3 / 10",
+				}},
+				Upcoming: []ScrapedUpcomingMovie{{
+					Progress: 28,
+					ScrapedMovie: ScrapedMovie{
+						Title: "Boyz n the Hood",
+						Year:  1991,
+						Link:  "https://www.imdb.com/title/tt0101507/",
+						Image: "/assets/images/movies/Boyz_n_the_Hood_1991/medium-cover.jpg",
+					},
+				}},
+			},
+		}
+
+		if err != nil {
+			t.Errorf("received error %s, expected %v", err, nil)
+		}
+
+		if len(received.Data.Popular) != 1 {
+			t.Errorf(
+				"received popular movie count %d, expected %d",
+				len(received.Data.Popular),
+				1,
+			)
+		}
+
+		if received.Data.Popular[0].Title != expected.Data.Popular[0].Title {
+			t.Errorf(
+				"received popular movie title %s, expected popular movie title %s",
+				received.Data.Popular[0].Title,
+				expected.Data.Popular[0].Title,
+			)
+		}
+
+		if received.Data.Popular[0].Rating != expected.Data.Popular[0].Rating {
+			t.Errorf(
+				"received popular movie rating %s, expected popular movie rating %s",
+				received.Data.Popular[0].Rating,
+				expected.Data.Popular[0].Rating,
+			)
+		}
+
+		if len(received.Data.Latest) != 1 {
+			t.Errorf(
+				"received latest torrents movie count %d, expected %d",
+				len(received.Data.Latest),
+				1,
+			)
+		}
+
+		if received.Data.Latest[0].Title != expected.Data.Latest[0].Title {
+			t.Errorf(
+				"received latest torrent movie title  %s, expected latest torrent movie title %s",
+				received.Data.Latest[0].Title,
+				expected.Data.Latest[0].Title,
+			)
+		}
+
+		if received.Data.Latest[0].Image != expected.Data.Latest[0].Image {
+			t.Errorf(
+				"received latest torrent movie image %s, expected latest torrent movie image %s",
+				received.Data.Latest[0].Image,
+				expected.Data.Latest[0].Image,
+			)
+		}
+
+		if received.Data.Latest[0].Rating != expected.Data.Latest[0].Rating {
+			t.Errorf(
+				"received latest torrent movie rating %s, expected latest torrent movie rating %s",
+				received.Data.Latest[0].Rating,
+				expected.Data.Latest[0].Rating,
+			)
+		}
+
+		if len(received.Data.Upcoming) != 1 {
+			t.Errorf(
+				"received upcoming movie count %d, expected %d",
+				len(received.Data.Upcoming),
+				1,
+			)
+		}
+
+		if received.Data.Upcoming[0].Link != expected.Data.Upcoming[0].Link {
+			t.Errorf(
+				"received upcoming movie link %s, expected upcoming movie link %s",
+				received.Data.Upcoming[0].Link,
+				expected.Data.Upcoming[0].Link,
+			)
+		}
+
+		if received.Data.Upcoming[0].Progress != expected.Data.Upcoming[0].Progress {
+			t.Errorf(
+				"received upcoming movie progress %d, expected upcoming movie progress %d",
+				received.Data.Upcoming[0].Progress,
+				expected.Data.Upcoming[0].Progress,
 			)
 		}
 	})
