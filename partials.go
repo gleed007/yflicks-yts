@@ -7,12 +7,17 @@ type Movie struct {
 	State    string `json:"state"`
 }
 
-type TrendingMovie struct {
+type ScrapedMovie struct {
 	Title  string `json:"title"`
 	Year   int    `json:"year"`
 	Link   string `json:"link"`
 	Image  string `json:"image"`
 	Rating string `json:"rating"`
+}
+
+type ScrapedUpcomingMovie struct {
+	ScrapedMovie
+	Progress int `json:"progress"`
 }
 
 type MovieDetails struct {

@@ -28,7 +28,13 @@ type SearchMoviesResponse struct {
 }
 
 type TrendingMoviesData struct {
-	Movies []TrendingMovie `json:"movies"`
+	Movies []ScrapedMovie `json:"movies"`
+}
+
+type HomePageContentData struct {
+	Popular  []ScrapedMovie
+	Latest   []ScrapedMovie
+	Upcoming []ScrapedUpcomingMovie
 }
 
 type MovieDetailsResponse struct {
@@ -43,4 +49,8 @@ type MovieSuggestionsResponse struct {
 
 type TrendingMoviesResponse struct {
 	Data TrendingMoviesData `json:"data"`
+}
+
+type HomePageContentResponse struct {
+	Data HomePageContentData `json:"data"`
 }

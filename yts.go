@@ -118,26 +118,10 @@ func (c Client) GetTrendingMovies(ctx context.Context) (
 		return nil, errors.New("no selections found for trending movies")
 	}
 
-	trendingMovies := make([]TrendingMovie, 0)
+	trendingMovies := make([]ScrapedMovie, 0)
 	selection.Each(func(i int, s *goquery.Selection) {
-		var (
-			bottom   = s.Find("div.browse-movie-bottom")
-			anchor   = s.Find("a.browse-movie-link")
-			title    = bottom.Find("a.browse-movie-title").Text()
-			year     = bottom.Find("div.browse-movie-year").Text()
-			link, _  = anchor.Attr("href")
-			image, _ = anchor.Find("img").Attr("src")
-			rating   = anchor.Find("h4.rating").Text()
-		)
-
-		yearInt, _ := strconv.Atoi(year)
-		trendingMovies = append(trendingMovies, TrendingMovie{
-			Title:  title,
-			Year:   yearInt,
-			Link:   link,
-			Image:  image,
-			Rating: rating,
-		})
+		trendingMovie := c.parseScrapedMovie(s)
+		trendingMovies = append(trendingMovies, trendingMovie)
 	})
 
 	response := &TrendingMoviesResponse{
@@ -145,6 +129,104 @@ func (c Client) GetTrendingMovies(ctx context.Context) (
 	}
 
 	return response, nil
+}
+
+func (c Client) GetHomePageContent(ctx context.Context) (
+	*HomePageContentResponse, error,
+) {
+	var rawPayload []byte
+	rawPayload, err := c.getPayloadRaw(ctx, c.siteURL)
+	if err != nil {
+		return nil, err
+	}
+
+	reader := strings.NewReader(string(rawPayload))
+	document, err := goquery.NewDocumentFromReader(reader)
+	if err != nil {
+		return nil, err
+	}
+
+	const (
+		popularCSS  = "div#popular-downloads div.browse-movie-wrap"
+		latestCSS   = "div.content-dark div.home-movies div.browse-movie-wrap"
+		upcomingCSS = "div.content-dark ~ div.home-content div.browse-movie-wrap"
+	)
+
+	var (
+		popDownloadSel   = document.Find(popularCSS)
+		latestTorrentSel = document.Find(latestCSS)
+		upcomingMovieSel = document.Find(upcomingCSS)
+	)
+
+	if popDownloadSel.Length() == 0 {
+		return nil, errors.New("no elements found for popular movies selection")
+	}
+
+	if latestTorrentSel.Length() == 0 {
+		return nil, errors.New("no elements found for latest torrents selection")
+	}
+
+	if upcomingMovieSel.Length() == 0 {
+		return nil, errors.New("no elements found for upcoming movies selection")
+	}
+
+	var (
+		popDownloads   = make([]ScrapedMovie, 0)
+		latestTorrents = make([]ScrapedMovie, 0)
+		upcomingMovies = make([]ScrapedUpcomingMovie, 0)
+	)
+
+	popDownloadSel.Each(func(i int, s *goquery.Selection) {
+		popDownload := c.parseScrapedMovie(s)
+		popDownloads = append(popDownloads, popDownload)
+	})
+
+	latestTorrentSel.Each(func(i int, s *goquery.Selection) {
+		latestTorrent := c.parseScrapedMovie(s)
+		latestTorrents = append(latestTorrents, latestTorrent)
+	})
+
+	upcomingMovieSel.Each(func(i int, s *goquery.Selection) {
+		progressSel := s.Find("div.browse-movie-year progress")
+		progress, _ := progressSel.Attr("value")
+		progressInt, _ := strconv.Atoi(progress)
+		upcomingMovies = append(
+			upcomingMovies,
+			ScrapedUpcomingMovie{
+				ScrapedMovie: c.parseScrapedMovie(s),
+				Progress:     progressInt,
+			},
+		)
+	})
+
+	response := &HomePageContentResponse{
+		Data: HomePageContentData{
+			popDownloads,
+			latestTorrents,
+			upcomingMovies,
+		},
+	}
+
+	return response, nil
+}
+
+func (c Client) parseScrapedMovie(s *goquery.Selection) ScrapedMovie {
+	var (
+		bottom   = s.Find("div.browse-movie-bottom")
+		anchor   = s.Find("a.browse-movie-link")
+		year     = bottom.Find("div.browse-movie-year").Text()
+		link, _  = anchor.Attr("href")
+		image, _ = anchor.Find("img").Attr("src")
+	)
+
+	yearInt, _ := strconv.Atoi(year)
+	return ScrapedMovie{
+		Title:  bottom.Find("a.browse-movie-title").Text(),
+		Year:   yearInt,
+		Link:   link,
+		Image:  image,
+		Rating: anchor.Find("h4.rating").Text(),
+	}
 }
 
 func (c Client) getPayloadJSON(
