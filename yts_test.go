@@ -282,7 +282,7 @@ func TestGetTrendingMovies(t *testing.T) {
 		received, err := client.GetTrendingMovies(context.TODO())
 		expected := TrendingMoviesResponse{
 			Data: TrendingMoviesData{
-				Movies: []TrendingMovie{{
+				Movies: []ScrapedMovie{{
 					Title:  "Superbad",
 					Year:   2007,
 					Link:   "https://yts.mx/movies/superbad-2007",
