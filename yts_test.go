@@ -2,6 +2,7 @@ package yts
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,20 @@ import (
 	"testing"
 	"time"
 )
+
+//go:embed testdata/*
+var testdata embed.FS
+
+func getMockTrendingMoviesResponse() string {
+	content, _ := testdata.ReadFile("testdata/page_trending.html")
+	fmt.Println(content)
+	return string(content)
+}
+
+func getMockHomePageContentResponse() string {
+	content, _ := testdata.ReadFile("testdata/page_home.html")
+	return string(content)
+}
 
 func getMockBaseResponse() BaseResponse {
 	return BaseResponse{
@@ -57,115 +72,6 @@ func getMockMovieSuggestionsResponse() MovieSuggestionsResponse {
 			Movies:     []Movie{},
 		},
 	}
-}
-
-func getMockTrendingMoviesResponse() string {
-	return `
-	  <div class="main-content">
-			<div class="browse-content">
-				<div class="container">
-				  <section>
-						<div class="row">
-						<div class="browse-movie-wrap col-xs-10 col-sm-4 col-md-5 col-lg-4">
-							<a class="browse-movie-link" href="https://yts.mx/movies/superbad-2007">
-							  <figure>
-									<img class="img-responsive" src="/assets/images/movies/Superbad_2007/medium-cover.jpg" alt="Superbad (2007) download" width="170" height="255">
-									<figcaption class="hidden-xs hidden-sm">
-										<span class="icon-star"></span>
-										<h4 class="rating">7.6 / 10</h4>
-										<h4>Action</h4>
-										<h4>Comedy</h4>
-										<span class="button-green-download2-big">View Details</span>
-									</figcaption>
-								</figure>
-								</a>
-								<div class="browse-movie-bottom">
-									<a class="browse-movie-title" href="https://yts.mx/movies/superbad-2007">Superbad</a>
-									<div class="browse-movie-year">2007</div>
-								</div>
-							</div>
-						</div>
-					</section>
-				</div>
-			</div>
-		</div>
-	`
-}
-
-func getMockHomePageContentResponse() string {
-	return `
-		<div class="main-content">
-      <div class="container home-content">
-        <div id="popular-downloads">
-          <div class="row">
-            <div class="browse-movie-wrap col-xs-10 col-sm-5">
-              <a href="https://yts.mx/movies/migration-2023" class="browse-movie-link">
-              <figure>
-                <img class="img-responsive" src="/assets/images/movies/migration_2023/medium-cover.jpg" alt="Migration (2023) download" width="210" height="315">
-                <figcaption class="hidden-xs hidden-sm">
-                  <h4 class="rating">6.8 / 10</h4>
-                  <h4>Action</h4>
-                  <h4>Adventure</h4><span class="button-green-download2-big">View Details</span>
-                </figcaption>
-              </figure></a>
-              <div class="browse-movie-bottom">
-                <a href="https://yts.mx/movies/migration-2023" class="browse-movie-title">Migration</a>
-                <div class="browse-movie-year">
-                  2023
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="content-dark">
-        <div class="container home-content">
-          <div class="home-movies">
-            <div class="row">
-              <div class="browse-movie-wrap col-xs-10 col-sm-5">
-                <a href="https://yts.mx/movies/het-einde-van-de-reis-1981" class="browse-movie-link">
-                <figure>
-                  <img class="img-responsive" src="/assets/images/movies/het_einde_van_de_reis_1981/medium-cover.jpg" alt="Het einde van de reis (1981) download" width="210" height="315"> <img class="quality-banner img-responsive" src="/assets/images/website/banner720p.png" alt="Het einde van de reis (1981) download 720p" width="118" height="91">
-                  <figcaption class="hidden-xs hidden-sm">
-                    <h4 class="rating">5.3 / 10</h4>
-                    <h4>Action</h4><span class="button-green-download2-big">View Details</span>
-                  </figcaption>
-                </figure></a>
-                <div class="browse-movie-bottom">
-                  <a href="https://yts.mx/movies/het-einde-van-de-reis-1981" class="browse-movie-title"><span style="color: rgb(172, 215, 222); font-size: 75%;">[NL]</span> Het einde van de reis</a>
-                  <div class="browse-movie-year">
-                    1981
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="container home-content">
-        <div class="home-movies">
-          <div class="row">
-            <div class="browse-movie-wrap col-xs-10 col-sm-5">
-              <a href="https://www.imdb.com/title/tt0101507/" target="_blank" class="browse-movie-link">
-              <figure>
-                <img class="img-responsive" src="/assets/images/movies/Boyz_n_the_Hood_1991/medium-cover.jpg" alt="Boyz n the Hood (1991)" width="210" height="315">
-                <figcaption class="hidden-xs hidden-sm imdb-upcoming">
-                  <span class="button-green-download2-big button-yellow-download-big">View IMDb</span>
-                </figcaption>
-              </figure></a>
-              <div class="browse-movie-bottom">
-                <a href="https://www.imdb.com/title/tt0101507/" target="_blank" class="browse-movie-title">Boyz n the Hood</a>
-                <div class="browse-movie-year">
-                  1991<br>
-                  <progress value="28" max="100" style="width: 73%;"></progress> 2160p
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-		</div>
-	`
 }
 
 func getTestHandler(pattern string, payload []byte) *http.ServeMux {
@@ -414,14 +320,8 @@ func TestGetHomePageContent(t *testing.T) {
 	})
 
 	t.Run("returns error if no latest movie torrent containing element is found in document", func(t *testing.T) {
-		payload := `
-      <div>
-				<div id="popular-downloads">
-					<div class="browse-movie-wrap"></div>
-				</div>
-      </div>
-		`
-		handler := getTestHandler("/", []byte(payload))
+		payload, _ := testdata.ReadFile("testdata/latest_torrents_missing.html")
+		handler := getTestHandler("/", payload)
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
@@ -433,20 +333,9 @@ func TestGetHomePageContent(t *testing.T) {
 		}
 	})
 
-	t.Run("returns error if no latest movie torrent containing element is found in document", func(t *testing.T) {
-		payload := `
-			<div>
-			  <div id="popular-downloads">
-				  <div class="browse-movie-wrap"></div>
-				</div>
-			  <div class="content-dark">
-				  <div class="home-movies">
-						<div class="browse-movie-wrap"></div>
-					</div>
-				</div>
-			</div>
-		`
-		handler := getTestHandler("/", []byte(payload))
+	t.Run("returns error if no upcoming movies containing element is found in document", func(t *testing.T) {
+		payload, _ := testdata.ReadFile("testdata/upcoming_movies_missing.html")
+		handler := getTestHandler("/", payload)
 		server := httptest.NewServer(handler)
 		defer server.Close()
 
