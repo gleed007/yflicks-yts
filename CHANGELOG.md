@@ -1,5 +1,13 @@
 # Changelog
 
+<a name="v0.7.2"></a>
+## [v0.7.2](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.7.0...v0.7.2) (2024-01-25)
+
+### Feat
+
+* exposed methods returning genre, sortBy and orderBy lists
+
+
 <a name="v0.7.0"></a>
 ## [v0.7.0](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.6.0...v0.7.0) (2024-01-22)
 
