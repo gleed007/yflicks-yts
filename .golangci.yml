@@ -17,6 +17,7 @@ linters-settings:
         allow:
           - $gostd
           - github.com/go-playground/validator/v10
+          - github.com/PuerkitoBio/goquery
   govet:
     check-shadowing: true
   nolintlint:
