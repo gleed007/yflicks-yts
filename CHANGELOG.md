@@ -1,5 +1,18 @@
 # Changelog
 
+<a name="v0.8.0"></a>
+## [v0.8.0](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.7.2...v0.8.0) (2024-01-25)
+
+### Feat
+
+* **client:** created method for scraping home page content
+* **client:** created method for scraping trending movies
+
+### Pull Requests
+
+* Merge pull request [#6](https://github.com/atifcppprogrammer/yflicks-yts/issues/6) from atifcppprogrammer/feature/site-scrape
+
+
 <a name="v0.7.2"></a>
 ## [v0.7.2](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.7.0...v0.7.2) (2024-01-25)
 
