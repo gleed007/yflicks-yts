@@ -5,6 +5,52 @@ import (
 	"net/url"
 )
 
+const (
+	GenreAll         = "all"
+	GenreAction      = "action"
+	GenreAdventure   = "adventure"
+	GenreAnimation   = "animation"
+	GenreBiography   = "biography"
+	GenreComedy      = "comedy"
+	GenreCrime       = "crime"
+	GenreDocumentary = "documentary"
+	GenreDrama       = "drama"
+	GenreFamily      = "family"
+	GenreFantasy     = "fantasy"
+	GenreFilmNoir    = "film-noir"
+	GenreGameShow    = "game-show"
+	GenreHistory     = "history"
+	GenreHorror      = "horror"
+	GenreMusic       = "music"
+	GenreMusical     = "musical"
+	GenreMystery     = "mystery"
+	GenreNews        = "news"
+	GenreRealityTV   = "reality-tv"
+	GenreRomance     = "romance"
+	GenreSciFi       = "sci-fi"
+	GenreSport       = "sport"
+	GenreTalkShow    = "talk-show"
+	GenreThriller    = "thriller"
+	GenreWar         = "war"
+	GenreWestern     = "western"
+)
+
+const (
+	SortByTitle         = "title"
+	SortByYear          = "year"
+	SortByRating        = "rating"
+	SortByPeers         = "peers"
+	SortBySeeds         = "seeds"
+	SortByDownloadCount = "download_count"
+	SortByLikeCount     = "like_count"
+	SortByDateAdded     = "date_added"
+)
+
+const (
+	OrderByAsc  = "asc"
+	OrderByDesc = "desc"
+)
+
 type SearchMoviesFilters struct {
 	Limit         int    `json:"limit"           validate:"min=1,max=50"`
 	Page          int    `json:"page"            validate:"min=1"`
@@ -21,6 +67,57 @@ type MovieDetailsFilters struct {
 	MovieID    int  `json:"movie_id"    validate:"required,min=1"`
 	WithImages bool `json:"with_images" validate:"boolean"`
 	WithCast   bool `json:"with_cast"   validate:"boolean"`
+}
+
+func GetGenreList() []string {
+	return []string{
+		GenreAction,
+		GenreAdventure,
+		GenreAnimation,
+		GenreBiography,
+		GenreComedy,
+		GenreCrime,
+		GenreDocumentary,
+		GenreDrama,
+		GenreFamily,
+		GenreFantasy,
+		GenreFilmNoir,
+		GenreGameShow,
+		GenreHistory,
+		GenreHorror,
+		GenreMusic,
+		GenreMusical,
+		GenreMystery,
+		GenreNews,
+		GenreRealityTV,
+		GenreRomance,
+		GenreSciFi,
+		GenreSport,
+		GenreTalkShow,
+		GenreThriller,
+		GenreWar,
+		GenreWestern,
+	}
+}
+
+func GetSortByList() []string {
+	return []string{
+		SortByTitle,
+		SortByYear,
+		SortByRating,
+		SortByPeers,
+		SortBySeeds,
+		SortByDownloadCount,
+		SortByLikeCount,
+		SortByDateAdded,
+	}
+}
+
+func GetOrderByList() []string {
+	return []string{
+		OrderByAsc,
+		OrderByDesc,
+	}
 }
 
 func DefaultSearchMoviesFilter() *SearchMoviesFilters {
