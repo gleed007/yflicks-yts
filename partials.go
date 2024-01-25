@@ -1,5 +1,10 @@
 package yts
 
+import (
+	"fmt"
+	"net/url"
+)
+
 type Movie struct {
 	MoviePartial
 	Summary  string `json:"summary"`
@@ -88,4 +93,55 @@ type Meta struct {
 	ServerTimezone string `json:"server_timezone"`
 	APIVersion     int    `json:"api_version"`
 	ExecutionTime  string `json:"execution_time"`
+}
+
+func DefaultTorrentTrackerList() []string {
+	return []string{
+		"udp://open.demonii.com:1337/announce",
+		"udp://tracker.openbittorrent.com:80",
+		"udp://tracker.coppersurfer.tk:6969",
+		"udp://glotorrents.pw:6969/announce",
+		"udp://tracker.opentrackr.org:1337/announce",
+		"udp://torrent.gresille.org:80/announce",
+		"udp://p4p.arenabg.com:1337",
+		"udp://tracker.leechers-paradise.org:6969",
+	}
+}
+
+func (mp *MoviePartial) GetMagnet(q Quality) (string, error) {
+	var foundTorrent Torrent
+	for i := 0; i < len(mp.Torrents); i++ {
+		if mp.Torrents[i].Quality == q {
+			foundTorrent = mp.Torrents[i]
+			break
+		}
+	}
+
+	if foundTorrent.Quality == "" {
+		return "", fmt.Errorf("no torrent found having quality %s", q)
+	}
+
+	movieName := fmt.Sprintf(
+		"%s+[%s]+[YTS.MX]",
+		mp.TitleLong,
+		foundTorrent.Quality,
+	)
+
+	var (
+		defaultTrackers = DefaultTorrentTrackerList()
+		trackers        = url.Values{}
+	)
+
+	for _, tracker := range defaultTrackers {
+		trackers.Add("tr", tracker)
+	}
+
+	magnet := fmt.Sprintf(
+		"magnet:?xt=urn:btih:%s&dn=%s&%s",
+		foundTorrent.Hash,
+		url.QueryEscape(movieName),
+		trackers.Encode(),
+	)
+
+	return magnet, nil
 }
