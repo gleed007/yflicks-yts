@@ -17,7 +17,6 @@ var testdata embed.FS
 
 func getMockTrendingMoviesResponse() string {
 	content, _ := testdata.ReadFile("testdata/page_trending.html")
-	fmt.Println(content)
 	return string(content)
 }
 
