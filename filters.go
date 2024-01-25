@@ -5,50 +5,56 @@ import (
 	"net/url"
 )
 
-const (
-	GenreAll         = "all"
-	GenreAction      = "action"
-	GenreAdventure   = "adventure"
-	GenreAnimation   = "animation"
-	GenreBiography   = "biography"
-	GenreComedy      = "comedy"
-	GenreCrime       = "crime"
-	GenreDocumentary = "documentary"
-	GenreDrama       = "drama"
-	GenreFamily      = "family"
-	GenreFantasy     = "fantasy"
-	GenreFilmNoir    = "film-noir"
-	GenreGameShow    = "game-show"
-	GenreHistory     = "history"
-	GenreHorror      = "horror"
-	GenreMusic       = "music"
-	GenreMusical     = "musical"
-	GenreMystery     = "mystery"
-	GenreNews        = "news"
-	GenreRealityTV   = "reality-tv"
-	GenreRomance     = "romance"
-	GenreSciFi       = "sci-fi"
-	GenreSport       = "sport"
-	GenreTalkShow    = "talk-show"
-	GenreThriller    = "thriller"
-	GenreWar         = "war"
-	GenreWestern     = "western"
-)
+type Genre string
 
 const (
-	SortByTitle         = "title"
-	SortByYear          = "year"
-	SortByRating        = "rating"
-	SortByPeers         = "peers"
-	SortBySeeds         = "seeds"
-	SortByDownloadCount = "download_count"
-	SortByLikeCount     = "like_count"
-	SortByDateAdded     = "date_added"
+	GenreAll         Genre = "all"
+	GenreAction      Genre = "action"
+	GenreAdventure   Genre = "adventure"
+	GenreAnimation   Genre = "animation"
+	GenreBiography   Genre = "biography"
+	GenreComedy      Genre = "comedy"
+	GenreCrime       Genre = "crime"
+	GenreDocumentary Genre = "documentary"
+	GenreDrama       Genre = "drama"
+	GenreFamily      Genre = "family"
+	GenreFantasy     Genre = "fantasy"
+	GenreFilmNoir    Genre = "film-noir"
+	GenreGameShow    Genre = "game-show"
+	GenreHistory     Genre = "history"
+	GenreHorror      Genre = "horror"
+	GenreMusic       Genre = "music"
+	GenreMusical     Genre = "musical"
+	GenreMystery     Genre = "mystery"
+	GenreNews        Genre = "news"
+	GenreRealityTV   Genre = "reality-tv"
+	GenreRomance     Genre = "romance"
+	GenreSciFi       Genre = "sci-fi"
+	GenreSport       Genre = "sport"
+	GenreTalkShow    Genre = "talk-show"
+	GenreThriller    Genre = "thriller"
+	GenreWar         Genre = "war"
+	GenreWestern     Genre = "western"
 )
 
+type SortBy string
+
 const (
-	OrderByAsc  = "asc"
-	OrderByDesc = "desc"
+	SortByTitle         SortBy = "title"
+	SortByYear          SortBy = "year"
+	SortByRating        SortBy = "rating"
+	SortByPeers         SortBy = "peers"
+	SortBySeeds         SortBy = "seeds"
+	SortByDownloadCount SortBy = "download_count"
+	SortByLikeCount     SortBy = "like_count"
+	SortByDateAdded     SortBy = "date_added"
+)
+
+type OrderBy string
+
+const (
+	OrderByAsc  OrderBy = "asc"
+	OrderByDesc OrderBy = "desc"
 )
 
 type SearchMoviesFilters struct {
@@ -69,8 +75,8 @@ type MovieDetailsFilters struct {
 	WithCast   bool `json:"with_cast"   validate:"boolean"`
 }
 
-func GetGenreList() []string {
-	return []string{
+func GetGenreList() []Genre {
+	return []Genre{
 		GenreAction,
 		GenreAdventure,
 		GenreAnimation,
@@ -100,8 +106,8 @@ func GetGenreList() []string {
 	}
 }
 
-func GetSortByList() []string {
-	return []string{
+func GetSortByList() []SortBy {
+	return []SortBy{
 		SortByTitle,
 		SortByYear,
 		SortByRating,
@@ -113,8 +119,8 @@ func GetSortByList() []string {
 	}
 }
 
-func GetOrderByList() []string {
-	return []string{
+func GetOrderByList() []OrderBy {
+	return []OrderBy{
 		OrderByAsc,
 		OrderByDesc,
 	}
