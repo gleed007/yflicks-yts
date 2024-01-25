@@ -44,7 +44,7 @@ type MoviePartial struct {
 	Year                    int       `json:"year"`
 	Rating                  float64   `json:"rating"`
 	Runtime                 int       `json:"runtime"`
-	Genres                  []string  `json:"genres"`
+	Genres                  []Genre   `json:"genres"`
 	DescriptionFull         string    `json:"description_full"`
 	YtTrailerCode           string    `json:"yt_trailer_code"`
 	Language                string    `json:"language"`
@@ -60,20 +60,20 @@ type MoviePartial struct {
 }
 
 type Torrent struct {
-	URL              string `json:"url"`
-	Hash             string `json:"hash"`
-	Quality          string `json:"quality"`
-	Type             string `json:"type"`
-	IsRepack         string `json:"is_repack"`
-	VideoCodec       string `json:"video_codec"`
-	BitDepth         string `json:"bit_depth"`
-	AudioChannels    string `json:"audio_channels"`
-	Seeds            int    `json:"seeds"`
-	Peers            int    `json:"peers"`
-	Size             string `json:"size"`
-	SizeBytes        int    `json:"size_bytes"`
-	DateUploaded     string `json:"date_uploaded"`
-	DateUploadedUnix int    `json:"date_uploaded_unix"`
+	URL              string  `json:"url"`
+	Hash             string  `json:"hash"`
+	Quality          Quality `json:"quality"`
+	Type             string  `json:"type"`
+	IsRepack         string  `json:"is_repack"`
+	VideoCodec       string  `json:"video_codec"`
+	BitDepth         string  `json:"bit_depth"`
+	AudioChannels    string  `json:"audio_channels"`
+	Seeds            int     `json:"seeds"`
+	Peers            int     `json:"peers"`
+	Size             string  `json:"size"`
+	SizeBytes        int     `json:"size_bytes"`
+	DateUploaded     string  `json:"date_uploaded"`
+	DateUploadedUnix int     `json:"date_uploaded_unix"`
 }
 
 type Cast struct {
