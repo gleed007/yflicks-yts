@@ -11,6 +11,14 @@ else
 	@go test ./...
 endif
 
+test_coverage:
+	@go test -coverprofile=c.out
+ifdef save
+	@go tool cover -html="c.out" -o coverage.html
+else
+	@go tool cover -html="c.out" && rm c.out
+endif
+
 release:
 ifdef version
 	@git-chglog --next-tag v$(version) --output CHANGELOG.md
