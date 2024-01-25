@@ -37,6 +37,18 @@ const (
 	GenreWestern     Genre = "western"
 )
 
+type Quality string
+
+const (
+	QualityAll       Quality = "All"
+	Quality480p      Quality = "480p"
+	Quality720p      Quality = "720p"
+	Quality1080p     Quality = "1080p"
+	Quality1080pX265 Quality = "1080p.x265"
+	Quality2160p     Quality = "2160p"
+	Quality3D        Quality = "3D"
+)
+
 type SortBy string
 
 const (
@@ -103,6 +115,18 @@ func GetGenreList() []Genre {
 		GenreThriller,
 		GenreWar,
 		GenreWestern,
+	}
+}
+
+func GetQualityList() []Quality {
+	return []Quality{
+		QualityAll,
+		Quality480p,
+		Quality720p,
+		Quality1080p,
+		Quality1080pX265,
+		Quality2160p,
+		Quality3D,
 	}
 }
 
