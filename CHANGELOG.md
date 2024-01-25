@@ -1,5 +1,17 @@
 # Changelog
 
+<a name="v0.8.2"></a>
+## [v0.8.2](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.8.0...v0.8.2) (2024-01-26)
+
+### Feat
+
+* created `MoviePartial` method for creating torrent magnet
+
+### Fix
+
+* updated partials to use `Genre` and `Quality` types
+
+
 <a name="v0.8.0"></a>
 ## [v0.8.0](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.7.2...v0.8.0) (2024-01-25)
 
