@@ -1,5 +1,13 @@
 # Changelog
 
+<a name="v0.8.3"></a>
+## [v0.8.3](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.8.2...v0.8.3) (2024-01-26)
+
+### Fix
+
+* updated `SearchMovieFilters` with `Quality`, `SortBy` and `OrderBy` types
+
+
 <a name="v0.8.2"></a>
 ## [v0.8.2](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.8.0...v0.8.2) (2024-01-26)
 
