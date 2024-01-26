@@ -10,7 +10,7 @@ func TestSearchMoviesGetQueryString(t *testing.T) {
 	t.Run("returns correct querystring for default filters", func(t *testing.T) {
 		defaultFilters := DefaultSearchMoviesFilter()
 		received, _ := defaultFilters.getQueryString()
-		expected := "genre=all&limit=20&order_by=desc&page=1&quality=all&sort_by=date_added"
+		expected := "genre=All&limit=20&order_by=desc&page=1&quality=All&sort_by=date_added"
 		if received != expected {
 			t.Errorf(`received %s, but expected "%s"`, received, expected)
 		}
@@ -38,14 +38,14 @@ func TestSearchMoviesGetQueryString(t *testing.T) {
 				Field:    "Quality",
 				Tag:      "oneof",
 				Value:    "",
-				Expected: "all 480p 720p 1080p 1080p.x265 2160p 3D",
+				Expected: "All 480p 720p 1080p 1080p.x265 2160p 3D",
 			},
 			&StructValidationError{
 				Struct:   "SearchMoviesFilters",
 				Field:    "Genre",
 				Tag:      "oneof",
 				Value:    "",
-				Expected: "all action adventure animation biography comedy crime documentary drama family fantasy film-noir game-show history horror music musical mystery news reality-tv romance sci-fi sport talk-show thriller war western",
+				Expected: "All Action Adventure Animation Biography Comedy Crime Documentary Drama Family Fantasy Film-Noir Game-Show History Horror Music Musical Mystery News Reality-TV Romance Sci-Fi Sport Talk-Show Thriller War Western",
 			},
 			&StructValidationError{
 				Struct:   "SearchMoviesFilters",

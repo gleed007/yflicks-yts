@@ -70,15 +70,15 @@ const (
 )
 
 type SearchMoviesFilters struct {
-	Limit         int    `json:"limit"           validate:"min=1,max=50"`
-	Page          int    `json:"page"            validate:"min=1"`
-	Quality       string `json:"quality"         validate:"oneof=all 480p 720p 1080p 1080p.x265 2160p 3D"`
-	MinimumRating int    `json:"minimum_rating"  validate:"min=0,max=9"`
-	QueryTerm     string `json:"query_term"`
-	Genre         string `json:"genre"           validate:"oneof=all action adventure animation biography comedy crime documentary drama family fantasy film-noir game-show history horror music musical mystery news reality-tv romance sci-fi sport talk-show thriller war western"`
-	SortBy        string `json:"sort_by"         validate:"oneof=title year rating peers seeds download_count like_count date_added"`
-	OrderBy       string `json:"order_by"        validate:"oneof=asc desc"`
-	WithRTRatings bool   `json:"with_rt_ratings" validate:"boolean"`
+	Limit         int     `json:"limit"           validate:"min=1,max=50"`
+	Page          int     `json:"page"            validate:"min=1"`
+	Quality       Quality `json:"quality"         validate:"oneof=All 480p 720p 1080p 1080p.x265 2160p 3D"`
+	MinimumRating int     `json:"minimum_rating"  validate:"min=0,max=9"`
+	QueryTerm     string  `json:"query_term"`
+	Genre         Genre   `json:"genre"           validate:"oneof=All Action Adventure Animation Biography Comedy Crime Documentary Drama Family Fantasy Film-Noir Game-Show History Horror Music Musical Mystery News Reality-TV Romance Sci-Fi Sport Talk-Show Thriller War Western"`
+	SortBy        SortBy  `json:"sort_by"         validate:"oneof=title year rating peers seeds download_count like_count date_added"`
+	OrderBy       OrderBy `json:"order_by"        validate:"oneof=asc desc"`
+	WithRTRatings bool    `json:"with_rt_ratings" validate:"boolean"`
 }
 
 type MovieDetailsFilters struct {
@@ -159,10 +159,10 @@ func DefaultSearchMoviesFilter() *SearchMoviesFilters {
 	return &SearchMoviesFilters{
 		Limit:         defaultPageLimit,
 		Page:          1,
-		Quality:       "all",
+		Quality:       QualityAll,
 		MinimumRating: 0,
 		QueryTerm:     "",
-		Genre:         "all",
+		Genre:         GenreAll,
 		SortBy:        "date_added",
 		OrderBy:       "desc",
 		WithRTRatings: false,
@@ -211,6 +211,14 @@ func (f *SearchMoviesFilters) getQueryString() (string, error) {
 			if v != "" {
 				queryValues.Add(query, v)
 			}
+		case Quality:
+			queryValues.Add(query, string(v))
+		case Genre:
+			queryValues.Add(query, string(v))
+		case SortBy:
+			queryValues.Add(query, string(v))
+		case OrderBy:
+			queryValues.Add(query, string(v))
 		}
 	}
 
