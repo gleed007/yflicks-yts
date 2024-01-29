@@ -21,9 +21,9 @@ const (
 )
 
 type Client struct {
-	baseURL   string
-	siteURL   string
-	netClient *http.Client
+	apiBaseURL string
+	siteURL    string
+	netClient  *http.Client
 }
 
 func NewClient(timeout time.Duration) *Client {
@@ -274,7 +274,7 @@ func (c Client) getPayloadRaw(ctx context.Context, targetURL string) (
 }
 
 func (c Client) getEndpointURL(path, query string) string {
-	targetURL := fmt.Sprintf("%s/%s", c.baseURL, path)
+	targetURL := fmt.Sprintf("%s/%s", c.apiBaseURL, path)
 	if query == "" {
 		return targetURL
 	}
