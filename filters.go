@@ -95,7 +95,6 @@ func DefaultSearchMoviesFilter() *SearchMoviesFilters {
 		Quality:       QualityAll,
 		MinimumRating: 0,
 		QueryTerm:     "",
-		Genre:         GenreAll,
 		SortBy:        SortByDateAdded,
 		OrderBy:       OrderByDesc,
 		WithRTRatings: false,
