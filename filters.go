@@ -3,6 +3,8 @@ package yts
 import (
 	"fmt"
 	"net/url"
+
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 type Genre string
@@ -70,84 +72,15 @@ const (
 )
 
 type SearchMoviesFilters struct {
-	Limit         int     `json:"limit"           validate:"min=1,max=50"`
-	Page          int     `json:"page"            validate:"min=1"`
-	Quality       Quality `json:"quality"         validate:"oneof=All 480p 720p 1080p 1080p.x265 2160p 3D"`
-	MinimumRating int     `json:"minimum_rating"  validate:"min=0,max=9"`
+	Limit         int     `json:"limit"`
+	Page          int     `json:"page"`
+	Quality       Quality `json:"quality"`
+	MinimumRating int     `json:"minimum_rating"`
 	QueryTerm     string  `json:"query_term"`
-	Genre         Genre   `json:"genre"           validate:"oneof=All Action Adventure Animation Biography Comedy Crime Documentary Drama Family Fantasy Film-Noir Game-Show History Horror Music Musical Mystery News Reality-TV Romance Sci-Fi Sport Talk-Show Thriller War Western"`
-	SortBy        SortBy  `json:"sort_by"         validate:"oneof=title year rating peers seeds download_count like_count date_added"`
-	OrderBy       OrderBy `json:"order_by"        validate:"oneof=asc desc"`
-	WithRTRatings bool    `json:"with_rt_ratings" validate:"boolean"`
-}
-
-type MovieDetailsFilters struct {
-	MovieID    int  `json:"movie_id"    validate:"required,min=1"`
-	WithImages bool `json:"with_images" validate:"boolean"`
-	WithCast   bool `json:"with_cast"   validate:"boolean"`
-}
-
-func GetGenreList() []Genre {
-	return []Genre{
-		GenreAction,
-		GenreAdventure,
-		GenreAnimation,
-		GenreBiography,
-		GenreComedy,
-		GenreCrime,
-		GenreDocumentary,
-		GenreDrama,
-		GenreFamily,
-		GenreFantasy,
-		GenreFilmNoir,
-		GenreGameShow,
-		GenreHistory,
-		GenreHorror,
-		GenreMusic,
-		GenreMusical,
-		GenreMystery,
-		GenreNews,
-		GenreRealityTV,
-		GenreRomance,
-		GenreSciFi,
-		GenreSport,
-		GenreTalkShow,
-		GenreThriller,
-		GenreWar,
-		GenreWestern,
-	}
-}
-
-func GetQualityList() []Quality {
-	return []Quality{
-		QualityAll,
-		Quality480p,
-		Quality720p,
-		Quality1080p,
-		Quality1080pX265,
-		Quality2160p,
-		Quality3D,
-	}
-}
-
-func GetSortByList() []SortBy {
-	return []SortBy{
-		SortByTitle,
-		SortByYear,
-		SortByRating,
-		SortByPeers,
-		SortBySeeds,
-		SortByDownloadCount,
-		SortByLikeCount,
-		SortByDateAdded,
-	}
-}
-
-func GetOrderByList() []OrderBy {
-	return []OrderBy{
-		OrderByAsc,
-		OrderByDesc,
-	}
+	Genre         Genre   `json:"genre"`
+	SortBy        SortBy  `json:"sort_by"`
+	OrderBy       OrderBy `json:"order_by"`
+	WithRTRatings bool    `json:"with_rt_ratings"`
 }
 
 func DefaultSearchMoviesFilter() *SearchMoviesFilters {
@@ -163,8 +96,8 @@ func DefaultSearchMoviesFilter() *SearchMoviesFilters {
 		MinimumRating: 0,
 		QueryTerm:     "",
 		Genre:         GenreAll,
-		SortBy:        "date_added",
-		OrderBy:       "desc",
+		SortBy:        SortByDateAdded,
+		OrderBy:       OrderByDesc,
 		WithRTRatings: false,
 	}
 }
@@ -177,8 +110,101 @@ func DefaultMovieDetailsFilters(movieID int) *MovieDetailsFilters {
 	}
 }
 
+func (f *SearchMoviesFilters) Validate() error {
+	const (
+		maxMinRating = 9
+		maxLimit     = 50
+	)
+
+	return validation.ValidateStruct(
+		f,
+		validation.Field(
+			&f.Limit,
+			validation.Min(0),
+			validation.Max(maxLimit),
+		),
+		validation.Field(
+			&f.Page,
+			validation.Min(1),
+		),
+		validation.Field(
+			&f.Quality,
+			validation.In(
+				QualityAll,
+				Quality480p,
+				Quality720p,
+				Quality1080p,
+				Quality1080pX265,
+				Quality2160p,
+				Quality3D,
+			),
+		),
+		validation.Field(
+			&f.MinimumRating,
+			validation.Min(0),
+			validation.Max(maxMinRating),
+		),
+		validation.Field(
+			&f.Genre,
+			validation.In(
+				GenreAll,
+				GenreAction,
+				GenreAdventure,
+				GenreAnimation,
+				GenreBiography,
+				GenreComedy,
+				GenreCrime,
+				GenreDocumentary,
+				GenreDrama,
+				GenreFamily,
+				GenreFantasy,
+				GenreFilmNoir,
+				GenreGameShow,
+				GenreHistory,
+				GenreHorror,
+				GenreMusic,
+				GenreMusical,
+				GenreMystery,
+				GenreNews,
+				GenreRealityTV,
+				GenreRomance,
+				GenreSciFi,
+				GenreSport,
+				GenreTalkShow,
+				GenreThriller,
+				GenreWar,
+				GenreWestern,
+			),
+		),
+		validation.Field(
+			&f.SortBy,
+			validation.In(
+				SortByTitle,
+				SortByYear,
+				SortByRating,
+				SortByPeers,
+				SortBySeeds,
+				SortByDownloadCount,
+				SortByLikeCount,
+				SortByDateAdded,
+			),
+		),
+		validation.Field(
+			&f.OrderBy,
+			validation.In(
+				OrderByAsc,
+				OrderByDesc,
+			),
+		),
+		validation.Field(
+			&f.WithRTRatings,
+			validation.In(true, false),
+		),
+	)
+}
+
 func (f *SearchMoviesFilters) getQueryString() (string, error) {
-	if err := validateStruct("SearchMoviesFilters", f); err != nil {
+	if err := f.Validate(); err != nil {
 		return "", err
 	}
 
@@ -211,31 +237,52 @@ func (f *SearchMoviesFilters) getQueryString() (string, error) {
 			if v != "" {
 				queryValues.Add(query, v)
 			}
-		case Quality:
-			queryValues.Add(query, string(v))
-		case Genre:
-			queryValues.Add(query, string(v))
-		case SortBy:
-			queryValues.Add(query, string(v))
-		case OrderBy:
-			queryValues.Add(query, string(v))
+		case Quality, Genre, SortBy, OrderBy:
+			str := fmt.Sprintf("%v", v)
+			if str != "" {
+				queryValues.Add(query, str)
+			}
 		}
 	}
 
 	return queryValues.Encode(), nil
 }
 
+type MovieDetailsFilters struct {
+	MovieID    int  `json:"movie_id"`
+	WithImages bool `json:"with_images"`
+	WithCast   bool `json:"with_cast"`
+}
+
+func (f *MovieDetailsFilters) Validate() error {
+	return validation.ValidateStruct(
+		f,
+		validation.Field(
+			&f.MovieID,
+			validation.Required,
+			validation.Min(1),
+		),
+		validation.Field(
+			&f.WithImages,
+			validation.In(true, false),
+		),
+		validation.Field(
+			&f.WithCast,
+			validation.In(true, false),
+		),
+	)
+}
+
 func (f *MovieDetailsFilters) getQueryString() (string, error) {
-	if err := validateStruct("MovieDetailsFilters", f); err != nil {
+	if err := f.Validate(); err != nil {
 		return "", err
 	}
 
-	queryValues := url.Values{}
-	queryValues.Add("movie_id", fmt.Sprintf("%d", f.MovieID))
+	movieIDStr := fmt.Sprintf("%d", f.MovieID)
+	queryValues := url.Values{"movie_id": []string{movieIDStr}}
 	if f.WithImages {
 		queryValues.Add("with_images", "true")
 	}
-
 	if f.WithCast {
 		queryValues.Add("with_cast", "true")
 	}
