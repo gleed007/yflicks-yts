@@ -24,6 +24,7 @@ const (
 type Client struct {
 	apiBaseURL      string
 	siteURL         string
+	siteDomain      string
 	netClient       *http.Client
 	torrentTrackers []string
 }
@@ -36,6 +37,7 @@ func NewClient(timeout time.Duration) *Client {
 	return &Client{
 		APIBaseURL,
 		SiteURL,
+		SiteDomain,
 		&http.Client{Timeout: timeout},
 		DefaultTorrentTrackers(),
 	}
@@ -249,7 +251,7 @@ func (c Client) GetMagnetLink(t TorrentInfoGetter, q Quality) (string, error) {
 
 	torrentName := fmt.Sprintf(
 		"%s+[%s]+[%s]",
-		torrentInfo.MovieTitle, q, strings.ToUpper(SiteDomain),
+		torrentInfo.MovieTitle, q, strings.ToUpper(c.siteDomain),
 	)
 
 	var trackers = url.Values{}
