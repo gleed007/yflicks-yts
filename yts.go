@@ -18,12 +18,14 @@ import (
 const (
 	APIBaseURL = "https://yts.mx/api/v2"
 	SiteURL    = "https://yts.mx"
+	SiteDomain = "yts.mx"
 )
 
 type Client struct {
-	apiBaseURL string
-	siteURL    string
-	netClient  *http.Client
+	apiBaseURL      string
+	siteURL         string
+	netClient       *http.Client
+	torrentTrackers []string
 }
 
 func NewClient(timeout time.Duration) *Client {
@@ -35,6 +37,20 @@ func NewClient(timeout time.Duration) *Client {
 		APIBaseURL,
 		SiteURL,
 		&http.Client{Timeout: timeout},
+		DefaultTorrentTrackers(),
+	}
+}
+
+func DefaultTorrentTrackers() []string {
+	return []string{
+		"udp://open.demonii.com:1337/announce",
+		"udp://tracker.openbittorrent.com:80",
+		"udp://tracker.coppersurfer.tk:6969",
+		"udp://glotorrents.pw:6969/announce",
+		"udp://tracker.opentrackr.org:1337/announce",
+		"udp://torrent.gresille.org:80/announce",
+		"udp://p4p.arenabg.com:1337",
+		"udp://tracker.leechers-paradise.org:6969",
 	}
 }
 
@@ -208,6 +224,40 @@ func (c Client) GetHomePageContent(ctx context.Context) (
 	}
 
 	return response, nil
+}
+
+func (c Client) GetMagnetLink(t TorrentInfoGetter, q Quality) (string, error) {
+	var (
+		foundTorrent = Torrent{}
+		torrentInfo  = t.GetTorrentInfo()
+	)
+
+	for index := 0; index < len(torrentInfo.Torrents); index++ {
+		if torrentInfo.Torrents[index].Quality == q {
+			foundTorrent = torrentInfo.Torrents[index]
+		}
+	}
+
+	if foundTorrent.Quality == "" {
+		return "", fmt.Errorf("no torrent found having quality %s", q)
+	}
+
+	torrentName := fmt.Sprintf(
+		"%s+[%s]+[%s]",
+		torrentInfo.MovieTitle, q, strings.ToUpper(SiteDomain),
+	)
+
+	var trackers = url.Values{}
+	for _, tracker := range c.torrentTrackers {
+		trackers.Add("tr", tracker)
+	}
+
+	magnet := fmt.Sprintf(
+		"magnet:?xt=urn:btih:%s&dn=%s&%s",
+		foundTorrent.Hash, url.QueryEscape(torrentName), trackers.Encode(),
+	)
+
+	return magnet, nil
 }
 
 func (c Client) parseScrapedMovie(s *goquery.Selection) ScrapedMovie {
