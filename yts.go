@@ -72,15 +72,20 @@ func (c Client) SearchMovies(ctx context.Context, filters *SearchMoviesFilters) 
 	return parsedPayload, nil
 }
 
-func (c Client) GetMovieDetails(ctx context.Context, filters *MovieDetailsFilters) (
+func (c Client) GetMovieDetails(ctx context.Context, movieID int, filters *MovieDetailsFilters) (
 	*MovieDetailsResponse, error,
 ) {
+	if movieID <= 0 {
+		return nil, errors.New("provided movieID must be at least 1")
+	}
+
 	queryString, err := filters.getQueryString()
 	if err != nil {
 		return nil, err
 	}
 
 	parsedPayload := &MovieDetailsResponse{}
+	queryString = fmt.Sprintf("movie_id=%d&%s", movieID, queryString)
 	targetURL := c.getEndpointURL("movie_details.json", queryString)
 	err = c.getPayloadJSON(ctx, targetURL, parsedPayload)
 	if err != nil {

@@ -101,9 +101,8 @@ func DefaultSearchMoviesFilter() *SearchMoviesFilters {
 	}
 }
 
-func DefaultMovieDetailsFilters(movieID int) *MovieDetailsFilters {
+func DefaultMovieDetailsFilters() *MovieDetailsFilters {
 	return &MovieDetailsFilters{
-		MovieID:    movieID,
 		WithImages: true,
 		WithCast:   true,
 	}
@@ -248,7 +247,6 @@ func (f *SearchMoviesFilters) getQueryString() (string, error) {
 }
 
 type MovieDetailsFilters struct {
-	MovieID    int  `json:"movie_id"`
 	WithImages bool `json:"with_images"`
 	WithCast   bool `json:"with_cast"`
 }
@@ -256,11 +254,6 @@ type MovieDetailsFilters struct {
 func (f *MovieDetailsFilters) validateFilters() error {
 	return validation.ValidateStruct(
 		f,
-		validation.Field(
-			&f.MovieID,
-			validation.Required,
-			validation.Min(1),
-		),
 		validation.Field(
 			&f.WithImages,
 			validation.In(true, false),
@@ -277,8 +270,7 @@ func (f *MovieDetailsFilters) getQueryString() (string, error) {
 		return "", err
 	}
 
-	movieIDStr := fmt.Sprintf("%d", f.MovieID)
-	queryValues := url.Values{"movie_id": []string{movieIDStr}}
+	queryValues := url.Values{}
 	if f.WithImages {
 		queryValues.Add("with_images", "true")
 	}
