@@ -83,7 +83,7 @@ type SearchMoviesFilters struct {
 	WithRTRatings bool    `json:"with_rt_ratings"`
 }
 
-func DefaultSearchMoviesFilter() *SearchMoviesFilters {
+func DefaultSearchMoviesFilter(query string) *SearchMoviesFilters {
 	const (
 		defaultPageLimit     = 20
 		defaultMinimumRating = 0
@@ -94,7 +94,7 @@ func DefaultSearchMoviesFilter() *SearchMoviesFilters {
 		Page:          1,
 		Quality:       QualityAll,
 		MinimumRating: 0,
-		QueryTerm:     "",
+		QueryTerm:     query,
 		SortBy:        SortByDateAdded,
 		OrderBy:       OrderByDesc,
 		WithRTRatings: false,
