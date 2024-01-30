@@ -56,7 +56,7 @@ func DefaultTorrentTrackers() []string {
 	}
 }
 
-func (c Client) SearchMovies(ctx context.Context, filters *SearchMoviesFilters) (
+func (c *Client) SearchMovies(ctx context.Context, filters *SearchMoviesFilters) (
 	*SearchMoviesResponse, error,
 ) {
 	queryString, err := filters.getQueryString()
@@ -74,7 +74,7 @@ func (c Client) SearchMovies(ctx context.Context, filters *SearchMoviesFilters) 
 	return parsedPayload, nil
 }
 
-func (c Client) GetMovieDetails(ctx context.Context, movieID int, filters *MovieDetailsFilters) (
+func (c *Client) GetMovieDetails(ctx context.Context, movieID int, filters *MovieDetailsFilters) (
 	*MovieDetailsResponse, error,
 ) {
 	if movieID <= 0 {
@@ -97,7 +97,7 @@ func (c Client) GetMovieDetails(ctx context.Context, movieID int, filters *Movie
 	return parsedPayload, nil
 }
 
-func (c Client) GetMovieSuggestions(ctx context.Context, movieID int) (
+func (c *Client) GetMovieSuggestions(ctx context.Context, movieID int) (
 	*MovieSuggestionsResponse, error,
 ) {
 	if movieID <= 0 {
@@ -120,7 +120,7 @@ func (c Client) GetMovieSuggestions(ctx context.Context, movieID int) (
 	return parsedPayload, nil
 }
 
-func (c Client) GetTrendingMovies(ctx context.Context) (
+func (c *Client) GetTrendingMovies(ctx context.Context) (
 	*TrendingMoviesResponse, error,
 ) {
 	var rawPayload []byte
@@ -154,7 +154,7 @@ func (c Client) GetTrendingMovies(ctx context.Context) (
 	return response, nil
 }
 
-func (c Client) GetHomePageContent(ctx context.Context) (
+func (c *Client) GetHomePageContent(ctx context.Context) (
 	*HomePageContentResponse, error,
 ) {
 	var rawPayload []byte
@@ -233,7 +233,7 @@ func (c Client) GetHomePageContent(ctx context.Context) (
 	return response, nil
 }
 
-func (c Client) GetMagnetLink(t TorrentInfoGetter, q Quality) (string, error) {
+func (c *Client) GetMagnetLink(t TorrentInfoGetter, q Quality) (string, error) {
 	var (
 		foundTorrent = Torrent{}
 		torrentInfo  = t.GetTorrentInfo()
@@ -267,7 +267,7 @@ func (c Client) GetMagnetLink(t TorrentInfoGetter, q Quality) (string, error) {
 	return magnet, nil
 }
 
-func (c Client) parseScrapedMovie(s *goquery.Selection) ScrapedMovie {
+func (c *Client) parseScrapedMovie(s *goquery.Selection) ScrapedMovie {
 	var (
 		bottom   = s.Find("div.browse-movie-bottom")
 		anchor   = s.Find("a.browse-movie-link")
@@ -286,7 +286,7 @@ func (c Client) parseScrapedMovie(s *goquery.Selection) ScrapedMovie {
 	}
 }
 
-func (c Client) getPayloadJSON(
+func (c *Client) getPayloadJSON(
 	ctx context.Context, targetURL string, payload interface{},
 ) error {
 	rawPayload, err := c.getPayloadRaw(ctx, targetURL)
@@ -302,7 +302,7 @@ func (c Client) getPayloadJSON(
 	return nil
 }
 
-func (c Client) getPayloadRaw(ctx context.Context, targetURL string) (
+func (c *Client) getPayloadRaw(ctx context.Context, targetURL string) (
 	[]byte, error,
 ) {
 	parsedURL, err := url.Parse(targetURL)
@@ -330,7 +330,7 @@ func (c Client) getPayloadRaw(ctx context.Context, targetURL string) (
 	return rawPayload, nil
 }
 
-func (c Client) getEndpointURL(path, query string) string {
+func (c *Client) getEndpointURL(path, query string) string {
 	targetURL := fmt.Sprintf("%s/%s", c.apiBaseURL, path)
 	if query == "" {
 		return targetURL
