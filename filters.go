@@ -109,7 +109,7 @@ func DefaultMovieDetailsFilters(movieID int) *MovieDetailsFilters {
 	}
 }
 
-func (f *SearchMoviesFilters) Validate() error {
+func (f *SearchMoviesFilters) validateFilters() error {
 	const (
 		maxMinRating = 9
 		maxLimit     = 50
@@ -203,7 +203,7 @@ func (f *SearchMoviesFilters) Validate() error {
 }
 
 func (f *SearchMoviesFilters) getQueryString() (string, error) {
-	if err := f.Validate(); err != nil {
+	if err := f.validateFilters(); err != nil {
 		return "", err
 	}
 
@@ -253,7 +253,7 @@ type MovieDetailsFilters struct {
 	WithCast   bool `json:"with_cast"`
 }
 
-func (f *MovieDetailsFilters) Validate() error {
+func (f *MovieDetailsFilters) validateFilters() error {
 	return validation.ValidateStruct(
 		f,
 		validation.Field(
@@ -273,7 +273,7 @@ func (f *MovieDetailsFilters) Validate() error {
 }
 
 func (f *MovieDetailsFilters) getQueryString() (string, error) {
-	if err := f.Validate(); err != nil {
+	if err := f.validateFilters(); err != nil {
 		return "", err
 	}
 
