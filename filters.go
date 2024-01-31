@@ -113,7 +113,7 @@ func (f *SearchMoviesFilters) validateFilters() error {
 		maxLimit     = 50
 	)
 
-	return validation.ValidateStruct(
+	err := validation.ValidateStruct(
 		f,
 		validation.Field(
 			&f.Limit,
@@ -198,11 +198,17 @@ func (f *SearchMoviesFilters) validateFilters() error {
 			validation.In(true, false),
 		),
 	)
+
+	if err == nil {
+		return nil
+	}
+
+	return wrapErr(ErrStructValidationFailure, err)
 }
 
 func (f *SearchMoviesFilters) getQueryString() (string, error) {
 	if err := f.validateFilters(); err != nil {
-		return "", wrapErr(ErrStructValidationFailure, err)
+		return "", err
 	}
 
 	var (
@@ -258,7 +264,7 @@ func DefaultMovieDetailsFilters() *MovieDetailsFilters {
 }
 
 func (f *MovieDetailsFilters) validateFilters() error {
-	return validation.ValidateStruct(
+	err := validation.ValidateStruct(
 		f,
 		validation.Field(
 			&f.WithImages,
@@ -269,11 +275,17 @@ func (f *MovieDetailsFilters) validateFilters() error {
 			validation.In(true, false),
 		),
 	)
+
+	if err == nil {
+		return nil
+	}
+
+	return wrapErr(ErrStructValidationFailure, err)
 }
 
 func (f *MovieDetailsFilters) getQueryString() (string, error) {
 	if err := f.validateFilters(); err != nil {
-		return "", wrapErr(ErrStructValidationFailure, err)
+		return "", err
 	}
 
 	queryValues := url.Values{}
