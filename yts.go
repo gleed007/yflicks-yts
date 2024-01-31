@@ -21,6 +21,11 @@ const (
 	SiteDomain = "yts.mx"
 )
 
+const (
+	TimeoutLimitUpper = 5 * time.Minute
+	TimeoutLimitLower = 5 * time.Second
+)
+
 type Client struct {
 	apiBaseURL      string
 	siteURL         string
@@ -29,9 +34,24 @@ type Client struct {
 	torrentTrackers []string
 }
 
+var (
+	ErrSiteScrapingFailure    = errors.New("invalid_site_scraping_failure")
+	ErrQualityTorrentNotFound = errors.New("quality_torrent_not_found")
+)
+
+var ErrInvalidClientTimeout = fmt.Errorf(
+	`invalid_client_timeout: "yts client timeout must be between %s and %s inclusive"`,
+	TimeoutLimitLower,
+	TimeoutLimitUpper,
+)
+
+func wrapErr(sentinel error, others ...error) error {
+	return fmt.Errorf("%w: %s", sentinel, errors.Join(others...))
+}
+
 func NewClient(timeout time.Duration) *Client {
-	if timeout < time.Second*5 || time.Minute*5 < timeout {
-		panic(errors.New("YTS client timeout must be between 5 and 300 seconds inclusive"))
+	if timeout < TimeoutLimitLower || TimeoutLimitUpper < timeout {
+		panic(ErrInvalidClientTimeout)
 	}
 
 	return &Client{
@@ -78,7 +98,8 @@ func (c *Client) GetMovieDetails(ctx context.Context, movieID int, filters *Movi
 	*MovieDetailsResponse, error,
 ) {
 	if movieID <= 0 {
-		return nil, errors.New("provided movieID must be at least 1")
+		err := fmt.Errorf("provided movieID must be at least 1")
+		return nil, wrapErr(ErrValidationFailure, err)
 	}
 
 	queryString, err := filters.getQueryString()
@@ -101,7 +122,8 @@ func (c *Client) GetMovieSuggestions(ctx context.Context, movieID int) (
 	*MovieSuggestionsResponse, error,
 ) {
 	if movieID <= 0 {
-		return nil, errors.New("provided movieID must be at least 1")
+		err := fmt.Errorf("provided movieID must be at least 1")
+		return nil, wrapErr(ErrValidationFailure, err)
 	}
 
 	var (
@@ -136,9 +158,11 @@ func (c *Client) GetTrendingMovies(ctx context.Context) (
 		return nil, err
 	}
 
-	selection := document.Find("div.browse-movie-wrap")
+	const trendingCSS = "div.browse-movie-wrap"
+	selection := document.Find(trendingCSS)
 	if selection.Length() == 0 {
-		return nil, errors.New("no selections found for trending movies")
+		err := fmt.Errorf("no elements found for %q", trendingCSS)
+		return nil, wrapErr(ErrSiteScrapingFailure, err)
 	}
 
 	trendingMovies := make([]ScrapedMovie, 0)
@@ -182,15 +206,18 @@ func (c *Client) GetHomePageContent(ctx context.Context) (
 	)
 
 	if popDownloadSel.Length() == 0 {
-		return nil, errors.New("no elements found for popular movies selection")
+		err := fmt.Errorf("no elements found for %q", popularCSS)
+		return nil, wrapErr(ErrSiteScrapingFailure, err)
 	}
 
 	if latestTorrentSel.Length() == 0 {
-		return nil, errors.New("no elements found for latest torrents selection")
+		err := fmt.Errorf("no elements found for %q", latestCSS)
+		return nil, wrapErr(ErrSiteScrapingFailure, err)
 	}
 
 	if upcomingMovieSel.Length() == 0 {
-		return nil, errors.New("no elements found for upcoming movies selection")
+		err := fmt.Errorf("no elements found for %q", upcomingCSS)
+		return nil, wrapErr(ErrSiteScrapingFailure, err)
 	}
 
 	var (
@@ -246,7 +273,8 @@ func (c *Client) GetMagnetLink(t TorrentInfoGetter, q Quality) (string, error) {
 	}
 
 	if foundTorrent.Quality == "" {
-		return "", fmt.Errorf("no torrent found having quality %s", q)
+		err := fmt.Errorf("no torrent found having quality %s", q)
+		return "", wrapErr(ErrQualityTorrentNotFound, err)
 	}
 
 	torrentName := fmt.Sprintf(

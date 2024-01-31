@@ -1,6 +1,7 @@
 package yts
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -71,6 +72,11 @@ const (
 	OrderByDesc OrderBy = "desc"
 )
 
+var (
+	ErrValidationFailure       = errors.New("validation_failure")
+	ErrStructValidationFailure = errors.New("struct_validation_failure")
+)
+
 type SearchMoviesFilters struct {
 	Limit         int     `json:"limit"`
 	Page          int     `json:"page"`
@@ -98,13 +104,6 @@ func DefaultSearchMoviesFilter(query string) *SearchMoviesFilters {
 		SortBy:        SortByDateAdded,
 		OrderBy:       OrderByDesc,
 		WithRTRatings: false,
-	}
-}
-
-func DefaultMovieDetailsFilters() *MovieDetailsFilters {
-	return &MovieDetailsFilters{
-		WithImages: true,
-		WithCast:   true,
 	}
 }
 
@@ -203,7 +202,7 @@ func (f *SearchMoviesFilters) validateFilters() error {
 
 func (f *SearchMoviesFilters) getQueryString() (string, error) {
 	if err := f.validateFilters(); err != nil {
-		return "", err
+		return "", wrapErr(ErrStructValidationFailure, err)
 	}
 
 	var (
@@ -251,6 +250,13 @@ type MovieDetailsFilters struct {
 	WithCast   bool `json:"with_cast"`
 }
 
+func DefaultMovieDetailsFilters() *MovieDetailsFilters {
+	return &MovieDetailsFilters{
+		WithImages: true,
+		WithCast:   true,
+	}
+}
+
 func (f *MovieDetailsFilters) validateFilters() error {
 	return validation.ValidateStruct(
 		f,
@@ -267,7 +273,7 @@ func (f *MovieDetailsFilters) validateFilters() error {
 
 func (f *MovieDetailsFilters) getQueryString() (string, error) {
 	if err := f.validateFilters(); err != nil {
-		return "", err
+		return "", wrapErr(ErrStructValidationFailure, err)
 	}
 
 	queryValues := url.Values{}
