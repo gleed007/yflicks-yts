@@ -34,6 +34,12 @@ type Client struct {
 	torrentTrackers []string
 }
 
+type BaseResponse struct {
+	Status        string `json:"status"`
+	StatusMessage string `json:"status_message"`
+	Meta          `json:"@meta"`
+}
+
 var (
 	ErrSiteScrapingFailure    = errors.New("invalid_site_scraping_failure")
 	ErrQualityTorrentNotFound = errors.New("quality_torrent_not_found")
@@ -76,6 +82,18 @@ func DefaultTorrentTrackers() []string {
 	}
 }
 
+type SearchMoviesData struct {
+	MovieCount int     `json:"movie_count"`
+	Limit      int     `json:"limit"`
+	PageNumber int     `json:"page_number"`
+	Movies     []Movie `json:"movies"`
+}
+
+type SearchMoviesResponse struct {
+	BaseResponse
+	Data SearchMoviesData `json:"data"`
+}
+
 func (c *Client) SearchMovies(ctx context.Context, filters *SearchMoviesFilters) (
 	*SearchMoviesResponse, error,
 ) {
@@ -92,6 +110,15 @@ func (c *Client) SearchMovies(ctx context.Context, filters *SearchMoviesFilters)
 	}
 
 	return parsedPayload, nil
+}
+
+type MovieDetailsData struct {
+	Movie MovieDetails `json:"movie"`
+}
+
+type MovieDetailsResponse struct {
+	BaseResponse
+	Data MovieDetailsData `json:"data"`
 }
 
 func (c *Client) GetMovieDetails(ctx context.Context, movieID int, filters *MovieDetailsFilters) (
@@ -118,6 +145,16 @@ func (c *Client) GetMovieDetails(ctx context.Context, movieID int, filters *Movi
 	return parsedPayload, nil
 }
 
+type MovieSuggestionsData struct {
+	MovieCount int     `json:"movie_count"`
+	Movies     []Movie `json:"movies"`
+}
+
+type MovieSuggestionsResponse struct {
+	BaseResponse
+	Data MovieSuggestionsData `json:"data"`
+}
+
 func (c *Client) GetMovieSuggestions(ctx context.Context, movieID int) (
 	*MovieSuggestionsResponse, error,
 ) {
@@ -140,6 +177,14 @@ func (c *Client) GetMovieSuggestions(ctx context.Context, movieID int) (
 	}
 
 	return parsedPayload, nil
+}
+
+type TrendingMoviesData struct {
+	Movies []ScrapedMovie `json:"movies"`
+}
+
+type TrendingMoviesResponse struct {
+	Data TrendingMoviesData `json:"data"`
 }
 
 func (c *Client) GetTrendingMovies(ctx context.Context) (
@@ -176,6 +221,16 @@ func (c *Client) GetTrendingMovies(ctx context.Context) (
 	}
 
 	return response, nil
+}
+
+type HomePageContentData struct {
+	Popular  []ScrapedMovie
+	Latest   []ScrapedMovie
+	Upcoming []ScrapedUpcomingMovie
+}
+
+type HomePageContentResponse struct {
+	Data HomePageContentData `json:"data"`
 }
 
 func (c *Client) GetHomePageContent(ctx context.Context) (
