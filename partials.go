@@ -1,18 +1,5 @@
 package yts
 
-type ScrapedMovie struct {
-	Title  string `json:"title"`
-	Year   int    `json:"year"`
-	Link   string `json:"link"`
-	Image  string `json:"image"`
-	Rating string `json:"rating"`
-}
-
-type ScrapedUpcomingMovie struct {
-	ScrapedMovie
-	Progress int `json:"progress"`
-}
-
 type Meta struct {
 	ServerTime     int    `json:"server_time"`
 	ServerTimezone string `json:"server_timezone"`
