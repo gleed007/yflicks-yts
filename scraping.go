@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -66,12 +67,15 @@ func (smb *ScrapedMovieBase) scrape(s *goquery.Selection) error {
 	var (
 		bottom   = s.Find(movieBottomCSS)
 		anchor   = s.Find(movieLinkCSS)
-		year     = bottom.Find(movieYearCSS).Text()
+		year     = bottom.Find(movieYearCSS)
 		link, _  = anchor.Attr("href")
 		image, _ = anchor.Find("img").Attr("src")
 	)
 
-	yearInt, _ := strconv.Atoi(year)
+	yearText := year.Get(0).FirstChild.Data
+	yearTrim := strings.Trim(yearText, "\n")
+	yearInt, _ := strconv.Atoi(yearTrim)
+
 	scrapedMovieBase := ScrapedMovieBase{
 		Title: bottom.Find(movieTitleCSS).Text(),
 		Year:  yearInt,
