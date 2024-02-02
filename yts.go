@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	APIBaseURL = "https://yts.mx/api/v2"
-	SiteURL    = "https://yts.mx"
-	SiteDomain = "yts.mx"
+	DefaultAPIBaseURL = "https://yts.mx/api/v2"
+	DefaultSiteURL    = "https://yts.mx"
+	DefaultSiteDomain = "yts.mx"
 )
 
 const (
@@ -24,11 +24,11 @@ const (
 )
 
 type Client struct {
-	apiBaseURL      string
-	siteURL         string
-	siteDomain      string
-	netClient       *http.Client
-	torrentTrackers []string
+	APIBaseURL      string
+	SiteURL         string
+	SiteDomain      string
+	NetClient       *http.Client
+	TorrentTrackers []string
 }
 
 type BaseResponse struct {
@@ -58,9 +58,9 @@ func NewClient(timeout time.Duration) *Client {
 	}
 
 	return &Client{
-		APIBaseURL,
-		SiteURL,
-		SiteDomain,
+		DefaultAPIBaseURL,
+		DefaultSiteURL,
+		DefaultSiteDomain,
 		&http.Client{Timeout: timeout},
 		DefaultTorrentTrackers(),
 	}
@@ -187,7 +187,7 @@ func (c *Client) GetTrendingMovies(ctx context.Context) (
 	*TrendingMoviesResponse, error,
 ) {
 	var rawPayload []byte
-	pageURL := fmt.Sprintf("%s/trending-movies", c.siteURL)
+	pageURL := fmt.Sprintf("%s/trending-movies", c.SiteURL)
 	rawPayload, err := c.getPayloadRaw(ctx, pageURL)
 	if err != nil {
 		return nil, err
@@ -216,7 +216,7 @@ func (c *Client) GetHomePageContent(ctx context.Context) (
 	*HomePageContentResponse, error,
 ) {
 	var rawPayload []byte
-	rawPayload, err := c.getPayloadRaw(ctx, c.siteURL)
+	rawPayload, err := c.getPayloadRaw(ctx, c.SiteURL)
 	if err != nil {
 		return nil, err
 	}
@@ -249,11 +249,11 @@ func (c *Client) GetMagnetLink(t TorrentInfoGetter, q Quality) (string, error) {
 
 	torrentName := fmt.Sprintf(
 		"%s+[%s]+[%s]",
-		torrentInfo.MovieTitle, q, strings.ToUpper(c.siteDomain),
+		torrentInfo.MovieTitle, q, strings.ToUpper(c.SiteDomain),
 	)
 
 	var trackers = url.Values{}
-	for _, tracker := range c.torrentTrackers {
+	for _, tracker := range c.TorrentTrackers {
 		trackers.Add("tr", tracker)
 	}
 
@@ -295,7 +295,7 @@ func (c *Client) getPayloadRaw(ctx context.Context, targetURL string) (
 		return nil, err
 	}
 
-	response, err := c.netClient.Do(request)
+	response, err := c.NetClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +310,7 @@ func (c *Client) getPayloadRaw(ctx context.Context, targetURL string) (
 }
 
 func (c *Client) getEndpointURL(path, query string) string {
-	targetURL := fmt.Sprintf("%s/%s", c.apiBaseURL, path)
+	targetURL := fmt.Sprintf("%s/%s", c.APIBaseURL, path)
 	if query == "" {
 		return targetURL
 	}
