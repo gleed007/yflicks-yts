@@ -11,7 +11,7 @@ import (
 type Genre string
 
 const (
-	GenreAll         Genre = "All"
+	GenreAll         Genre = "all"
 	GenreAction      Genre = "Action"
 	GenreAdventure   Genre = "Adventure"
 	GenreAnimation   Genre = "Animation"
@@ -43,7 +43,7 @@ const (
 type Quality string
 
 const (
-	QualityAll       Quality = "All"
+	QualityAll       Quality = "all"
 	Quality480p      Quality = "480p"
 	Quality720p      Quality = "720p"
 	Quality1080p     Quality = "1080p"
@@ -101,6 +101,7 @@ func DefaultSearchMoviesFilter(query string) *SearchMoviesFilters {
 		Quality:       QualityAll,
 		MinimumRating: 0,
 		QueryTerm:     query,
+		Genre:         GenreAll,
 		SortBy:        SortByDateAdded,
 		OrderBy:       OrderByDesc,
 		WithRTRatings: false,
@@ -126,6 +127,7 @@ func (f *SearchMoviesFilters) validateFilters() error {
 		),
 		validation.Field(
 			&f.Quality,
+			validation.Required,
 			validation.In(
 				QualityAll,
 				Quality480p,
@@ -143,6 +145,7 @@ func (f *SearchMoviesFilters) validateFilters() error {
 		),
 		validation.Field(
 			&f.Genre,
+			validation.Required,
 			validation.In(
 				GenreAll,
 				GenreAction,
@@ -176,6 +179,7 @@ func (f *SearchMoviesFilters) validateFilters() error {
 		validation.Field(
 			&f.SortBy,
 			validation.In(
+				validation.Required,
 				SortByTitle,
 				SortByYear,
 				SortByRating,
@@ -188,6 +192,7 @@ func (f *SearchMoviesFilters) validateFilters() error {
 		),
 		validation.Field(
 			&f.OrderBy,
+			validation.Required,
 			validation.In(
 				OrderByAsc,
 				OrderByDesc,
