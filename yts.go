@@ -126,15 +126,14 @@ func (c *Client) GetMovieDetails(ctx context.Context, movieID int, filters *Movi
 		return nil, wrapErr(ErrValidationFailure, err)
 	}
 
-	queryString, err := filters.getQueryString()
-	if err != nil {
-		return nil, err
+	queryString := fmt.Sprintf("movie_id=%d", movieID)
+	if q := filters.getQueryString(); q != "" {
+		queryString = fmt.Sprintf("movie_id=%d&%s", movieID, q)
 	}
 
 	parsedPayload := &MovieDetailsResponse{}
-	queryString = fmt.Sprintf("movie_id=%d&%s", movieID, queryString)
 	targetURL := c.getEndpointURL("movie_details.json", queryString)
-	err = c.getPayloadJSON(ctx, targetURL, parsedPayload)
+	err := c.getPayloadJSON(ctx, targetURL, parsedPayload)
 	if err != nil {
 		return nil, err
 	}

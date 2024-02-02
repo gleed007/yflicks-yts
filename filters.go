@@ -263,31 +263,7 @@ func DefaultMovieDetailsFilters() *MovieDetailsFilters {
 	}
 }
 
-func (f *MovieDetailsFilters) validateFilters() error {
-	err := validation.ValidateStruct(
-		f,
-		validation.Field(
-			&f.WithImages,
-			validation.In(true, false),
-		),
-		validation.Field(
-			&f.WithCast,
-			validation.In(true, false),
-		),
-	)
-
-	if err == nil {
-		return nil
-	}
-
-	return wrapErr(ErrStructValidationFailure, err)
-}
-
-func (f *MovieDetailsFilters) getQueryString() (string, error) {
-	if err := f.validateFilters(); err != nil {
-		return "", err
-	}
-
+func (f *MovieDetailsFilters) getQueryString() string {
 	queryValues := url.Values{}
 	if f.WithImages {
 		queryValues.Add("with_images", "true")
@@ -296,5 +272,5 @@ func (f *MovieDetailsFilters) getQueryString() (string, error) {
 		queryValues.Add("with_cast", "true")
 	}
 
-	return queryValues.Encode(), nil
+	return queryValues.Encode()
 }
