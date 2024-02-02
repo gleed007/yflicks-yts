@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -96,13 +97,22 @@ type ScrapedMovie struct {
 	Rating string `json:"rating"`
 }
 
+var validateRatingRule = validation.NewStringRule(
+	func(input string) bool {
+		pattern := `^\d+(\.\d+)?\s*\/\s*10(\.\d+)?$`
+		re := regexp.MustCompile(pattern)
+		return re.MatchString(input)
+	},
+	`expecting rating in "[0-9].[0-9] / 10" format`,
+)
+
 func (sm *ScrapedMovie) validateScraping() error {
 	bErr := sm.ScrapedMovieBase.validateScraping()
 	mErr := validation.ValidateStruct(
 		sm,
 		validation.Field(
 			&sm.Rating,
-			validation.Required,
+			validateRatingRule,
 		),
 	)
 	if bErr == nil && mErr == nil {
@@ -141,7 +151,6 @@ func (sum *ScrapedUpcomingMovie) validateScraping() error {
 		sum,
 		validation.Field(
 			&sum.Progress,
-			validation.Required,
 			validation.Min(0),
 			validation.Max(maxProgress),
 		),
