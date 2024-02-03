@@ -81,17 +81,19 @@ func (smb *ScrapedMovieBase) scrape(s *goquery.Selection) error {
 	var (
 		bottom   = s.Find(movieBottomCSS)
 		anchor   = s.Find(movieLinkCSS)
-		year     = bottom.Find(movieYearCSS)
+		year     = bottom.Find(movieYearCSS).Text()
 		genreSel = s.Find(movieGenreCSS)
 		link, _  = anchor.Attr("href")
 		image, _ = anchor.Find("img").Attr("src")
 	)
 
-	yearText := year.Get(0).FirstChild.Data
-	yearTrim := strings.Trim(yearText, "\n")
-	yearInt, _ := strconv.Atoi(yearTrim)
-	genres := make([]Genre, 0)
+	var yearInt int
+	var yearText = strings.Fields(year)
+	if len(yearText) >= 1 {
+		yearInt, _ = strconv.Atoi(yearText[0])
+	}
 
+	genres := make([]Genre, 0)
 	genreSel.Each(func(i int, s *goquery.Selection) {
 		genres = append(genres, Genre(s.Text()))
 	})
@@ -161,7 +163,8 @@ func (sm *ScrapedMovie) scrape(s *goquery.Selection) error {
 
 type ScrapedUpcomingMovie struct {
 	ScrapedMovieBase
-	Progress int `json:"progress"`
+	Progress int     `json:"progress"`
+	Quality  Quality `json:"quality"`
 }
 
 func (sum *ScrapedUpcomingMovie) validateScraping() error {
@@ -184,13 +187,21 @@ func (sum *ScrapedUpcomingMovie) validateScraping() error {
 
 func (sum *ScrapedUpcomingMovie) scrape(s *goquery.Selection) error {
 	var (
-		progressSel    = s.Find(movieProgressCSS)
+		yearSel        = s.Find(movieYearCSS)
+		progressSel    = yearSel.Find(movieProgressCSS)
 		progress, _    = progressSel.Attr("value")
 		progressInt, _ = strconv.Atoi(progress)
 	)
 
+	var quality Quality
+	var yearText = strings.Fields(yearSel.Text())
+	if len(yearText) >= 2 {
+		quality = Quality(yearText[1])
+	}
+
 	upcomingMovie := ScrapedUpcomingMovie{}
 	upcomingMovie.Progress = progressInt
+	upcomingMovie.Quality = quality
 	_ = upcomingMovie.ScrapedMovieBase.scrape(s)
 	if err := upcomingMovie.validateScraping(); err != nil {
 		return wrapErr(ErrSiteScrapingFailure, err)
