@@ -77,6 +77,46 @@ var (
 	ErrStructValidationFailure = errors.New("struct_validation_failure")
 )
 
+var validateGenreRule = validation.In(
+	GenreAll,
+	GenreAction,
+	GenreAdventure,
+	GenreAnimation,
+	GenreBiography,
+	GenreComedy,
+	GenreCrime,
+	GenreDocumentary,
+	GenreDrama,
+	GenreFamily,
+	GenreFantasy,
+	GenreFilmNoir,
+	GenreGameShow,
+	GenreHistory,
+	GenreHorror,
+	GenreMusic,
+	GenreMusical,
+	GenreMystery,
+	GenreNews,
+	GenreRealityTV,
+	GenreRomance,
+	GenreSciFi,
+	GenreSport,
+	GenreTalkShow,
+	GenreThriller,
+	GenreWar,
+	GenreWestern,
+)
+
+var validateQualityRule = validation.In(
+	QualityAll,
+	Quality480p,
+	Quality720p,
+	Quality1080p,
+	Quality1080pX265,
+	Quality2160p,
+	Quality3D,
+)
+
 type SearchMoviesFilters struct {
 	Limit         int     `json:"limit"`
 	Page          int     `json:"page"`
@@ -128,15 +168,7 @@ func (f *SearchMoviesFilters) validateFilters() error {
 		validation.Field(
 			&f.Quality,
 			validation.Required,
-			validation.In(
-				QualityAll,
-				Quality480p,
-				Quality720p,
-				Quality1080p,
-				Quality1080pX265,
-				Quality2160p,
-				Quality3D,
-			),
+			validateQualityRule,
 		),
 		validation.Field(
 			&f.MinimumRating,
@@ -146,35 +178,7 @@ func (f *SearchMoviesFilters) validateFilters() error {
 		validation.Field(
 			&f.Genre,
 			validation.Required,
-			validation.In(
-				GenreAll,
-				GenreAction,
-				GenreAdventure,
-				GenreAnimation,
-				GenreBiography,
-				GenreComedy,
-				GenreCrime,
-				GenreDocumentary,
-				GenreDrama,
-				GenreFamily,
-				GenreFantasy,
-				GenreFilmNoir,
-				GenreGameShow,
-				GenreHistory,
-				GenreHorror,
-				GenreMusic,
-				GenreMusical,
-				GenreMystery,
-				GenreNews,
-				GenreRealityTV,
-				GenreRomance,
-				GenreSciFi,
-				GenreSport,
-				GenreTalkShow,
-				GenreThriller,
-				GenreWar,
-				GenreWestern,
-			),
+			validateGenreRule,
 		),
 		validation.Field(
 			&f.SortBy,

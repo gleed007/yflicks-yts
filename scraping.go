@@ -26,13 +26,15 @@ const (
 	movieYearCSS     = "div.browse-movie-year"
 	movieTitleCSS    = "a.browse-movie-title"
 	movieProgressCSS = "div.browse-movie-year progress"
+	movieGenreCSS    = "div.browse-movie-wrap h4:not([class='rating'])"
 )
 
 type ScrapedMovieBase struct {
-	Title string `json:"title"`
-	Year  int    `json:"year"`
-	Link  string `json:"link"`
-	Image string `json:"image"`
+	Title  string  `json:"title"`
+	Year   int     `json:"year"`
+	Link   string  `json:"link"`
+	Image  string  `json:"image"`
+	Genres []Genre `json:"genres"`
 }
 
 func (smb *ScrapedMovieBase) validateScraping() error {
@@ -57,11 +59,22 @@ func (smb *ScrapedMovieBase) validateScraping() error {
 		),
 	)
 
-	if err == nil {
+	var genreErrs error
+	for i, genre := range smb.Genres {
+		err := validation.Validate(&genre, validateGenreRule)
+		if err != nil {
+			genreErrs = errors.Join(
+				genreErrs,
+				fmt.Errorf("genres: invalid genres[%d] = %q", i, genre),
+			)
+		}
+	}
+
+	if err == nil && genreErrs == nil {
 		return nil
 	}
 
-	return wrapErr(ErrValidationFailure, err)
+	return wrapErr(ErrValidationFailure, err, genreErrs)
 }
 
 func (smb *ScrapedMovieBase) scrape(s *goquery.Selection) error {
@@ -69,6 +82,7 @@ func (smb *ScrapedMovieBase) scrape(s *goquery.Selection) error {
 		bottom   = s.Find(movieBottomCSS)
 		anchor   = s.Find(movieLinkCSS)
 		year     = bottom.Find(movieYearCSS)
+		genreSel = s.Find(movieGenreCSS)
 		link, _  = anchor.Attr("href")
 		image, _ = anchor.Find("img").Attr("src")
 	)
@@ -76,12 +90,18 @@ func (smb *ScrapedMovieBase) scrape(s *goquery.Selection) error {
 	yearText := year.Get(0).FirstChild.Data
 	yearTrim := strings.Trim(yearText, "\n")
 	yearInt, _ := strconv.Atoi(yearTrim)
+	genres := make([]Genre, 0)
+
+	genreSel.Each(func(i int, s *goquery.Selection) {
+		genres = append(genres, Genre(s.Text()))
+	})
 
 	scrapedMovieBase := ScrapedMovieBase{
-		Title: bottom.Find(movieTitleCSS).Text(),
-		Year:  yearInt,
-		Link:  link,
-		Image: image,
+		Title:  bottom.Find(movieTitleCSS).Text(),
+		Year:   yearInt,
+		Link:   link,
+		Image:  image,
+		Genres: genres,
 	}
 
 	if err := scrapedMovieBase.validateScraping(); err != nil {
