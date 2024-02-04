@@ -29,7 +29,7 @@ const (
 	movieGenreCSS    = "div.browse-movie-wrap h4:not([class='rating'])"
 )
 
-type ScrapedMovieBase struct {
+type SiteMovieBase struct {
 	Title  string  `json:"title"`
 	Year   int     `json:"year"`
 	Link   string  `json:"link"`
@@ -37,7 +37,7 @@ type ScrapedMovieBase struct {
 	Genres []Genre `json:"genres"`
 }
 
-func (smb *ScrapedMovieBase) validateScraping() error {
+func (smb *SiteMovieBase) validateScraping() error {
 	err := validation.ValidateStruct(
 		smb,
 		validation.Field(
@@ -61,8 +61,8 @@ func (smb *ScrapedMovieBase) validateScraping() error {
 
 	var genreErrs error
 	for i, genre := range smb.Genres {
-		err := validation.Validate(&genre, validateGenreRule)
-		if err != nil {
+		vErr := validation.Validate(genre, validateGenreRule)
+		if vErr != nil {
 			genreErrs = errors.Join(
 				genreErrs,
 				fmt.Errorf("genres: invalid genres[%d] = %q", i, genre),
@@ -77,7 +77,7 @@ func (smb *ScrapedMovieBase) validateScraping() error {
 	return wrapErr(ErrValidationFailure, err, genreErrs)
 }
 
-func (smb *ScrapedMovieBase) scrape(s *goquery.Selection) error {
+func (smb *SiteMovieBase) scrape(s *goquery.Selection) error {
 	var (
 		bottom   = s.Find(movieBottomCSS)
 		anchor   = s.Find(movieLinkCSS)
@@ -98,7 +98,7 @@ func (smb *ScrapedMovieBase) scrape(s *goquery.Selection) error {
 		genres = append(genres, Genre(s.Text()))
 	})
 
-	scrapedMovieBase := ScrapedMovieBase{
+	siteMovieBase := SiteMovieBase{
 		Title:  bottom.Find(movieTitleCSS).Text(),
 		Year:   yearInt,
 		Link:   link,
@@ -106,16 +106,16 @@ func (smb *ScrapedMovieBase) scrape(s *goquery.Selection) error {
 		Genres: genres,
 	}
 
-	if err := scrapedMovieBase.validateScraping(); err != nil {
+	if err := siteMovieBase.validateScraping(); err != nil {
 		return wrapErr(ErrSiteScrapingFailure, err)
 	}
 
-	*smb = scrapedMovieBase
+	*smb = siteMovieBase
 	return nil
 }
 
-type ScrapedMovie struct {
-	ScrapedMovieBase
+type SiteMovie struct {
+	SiteMovieBase
 	Rating string `json:"rating"`
 }
 
@@ -128,8 +128,8 @@ var validateRatingRule = validation.NewStringRule(
 	`expecting rating in "[0-9].[0-9] / 10" format`,
 )
 
-func (sm *ScrapedMovie) validateScraping() error {
-	bErr := sm.ScrapedMovieBase.validateScraping()
+func (sm *SiteMovie) validateScraping() error {
+	bErr := sm.SiteMovieBase.validateScraping()
 	mErr := validation.ValidateStruct(
 		sm,
 		validation.Field(
@@ -144,32 +144,32 @@ func (sm *ScrapedMovie) validateScraping() error {
 	return wrapErr(ErrValidationFailure, bErr, mErr)
 }
 
-func (sm *ScrapedMovie) scrape(s *goquery.Selection) error {
+func (sm *SiteMovie) scrape(s *goquery.Selection) error {
 	var (
 		anchor = s.Find(movieLinkCSS)
 		rating = anchor.Find("h4.rating").Text()
 	)
 
-	scrapedMovie := ScrapedMovie{}
-	scrapedMovie.Rating = rating
-	_ = scrapedMovie.ScrapedMovieBase.scrape(s)
-	if err := scrapedMovie.validateScraping(); err != nil {
+	siteMovie := SiteMovie{}
+	siteMovie.Rating = rating
+	_ = siteMovie.SiteMovieBase.scrape(s)
+	if err := siteMovie.validateScraping(); err != nil {
 		return wrapErr(ErrSiteScrapingFailure, err)
 	}
 
-	*sm = scrapedMovie
+	*sm = siteMovie
 	return nil
 }
 
-type ScrapedUpcomingMovie struct {
-	ScrapedMovieBase
+type SiteUpcomingMovie struct {
+	SiteMovieBase
 	Progress int     `json:"progress"`
 	Quality  Quality `json:"quality"`
 }
 
-func (sum *ScrapedUpcomingMovie) validateScraping() error {
+func (sum *SiteUpcomingMovie) validateScraping() error {
 	const maxProgress = 100
-	bErr := sum.ScrapedMovieBase.validateScraping()
+	bErr := sum.SiteMovieBase.validateScraping()
 	mErr := validation.ValidateStruct(
 		sum,
 		validation.Field(
@@ -185,7 +185,9 @@ func (sum *ScrapedUpcomingMovie) validateScraping() error {
 	return wrapErr(ErrValidationFailure, bErr, mErr)
 }
 
-func (sum *ScrapedUpcomingMovie) scrape(s *goquery.Selection) error {
+func (sum *SiteUpcomingMovie) scrape(s *goquery.Selection) error {
+	const expectedYearElemLen = 2
+
 	var (
 		yearSel        = s.Find(movieYearCSS)
 		progressSel    = yearSel.Find(movieProgressCSS)
@@ -195,14 +197,14 @@ func (sum *ScrapedUpcomingMovie) scrape(s *goquery.Selection) error {
 
 	var quality Quality
 	var yearText = strings.Fields(yearSel.Text())
-	if len(yearText) >= 2 {
+	if len(yearText) >= expectedYearElemLen {
 		quality = Quality(yearText[1])
 	}
 
-	upcomingMovie := ScrapedUpcomingMovie{}
+	upcomingMovie := SiteUpcomingMovie{}
 	upcomingMovie.Progress = progressInt
 	upcomingMovie.Quality = quality
-	_ = upcomingMovie.ScrapedMovieBase.scrape(s)
+	_ = upcomingMovie.SiteMovieBase.scrape(s)
 	if err := upcomingMovie.validateScraping(); err != nil {
 		return wrapErr(ErrSiteScrapingFailure, err)
 	}
@@ -224,14 +226,14 @@ func (c *Client) scrapeTrendingMoviesData(r io.Reader) (*TrendingMoviesData, err
 	}
 
 	var (
-		trendingMovies = make([]ScrapedMovie, 0)
+		trendingMovies = make([]SiteMovie, 0)
 		scrapingErrs   = make([]error, 0)
 	)
 
 	selection.Each(func(i int, s *goquery.Selection) {
-		scrapedMovie := ScrapedMovie{}
-		err := scrapedMovie.scrape(s)
-		trendingMovies = append(trendingMovies, scrapedMovie)
+		siteMovie := SiteMovie{}
+		err := siteMovie.scrape(s)
+		trendingMovies = append(trendingMovies, siteMovie)
 		scrapingErrs = append(scrapingErrs, err)
 	})
 
@@ -270,28 +272,28 @@ func (c *Client) scrapeHomePageContentData(r io.Reader) (*HomePageContentData, e
 	}
 
 	var (
-		popDownloads   = make([]ScrapedMovie, 0)
-		latestTorrents = make([]ScrapedMovie, 0)
-		upcomingMovies = make([]ScrapedUpcomingMovie, 0)
+		popDownloads   = make([]SiteMovie, 0)
+		latestTorrents = make([]SiteMovie, 0)
+		upcomingMovies = make([]SiteUpcomingMovie, 0)
 		scrapingErrs   = make([]error, 0)
 	)
 
 	popDownloadSel.Each(func(i int, s *goquery.Selection) {
-		scrapedMovie := ScrapedMovie{}
-		err := scrapedMovie.scrape(s)
-		popDownloads = append(popDownloads, scrapedMovie)
+		siteMovie := SiteMovie{}
+		err := siteMovie.scrape(s)
+		popDownloads = append(popDownloads, siteMovie)
 		scrapingErrs = append(scrapingErrs, err)
 	})
 
 	latestTorrentSel.Each(func(i int, s *goquery.Selection) {
-		scrapedMovie := ScrapedMovie{}
-		err := scrapedMovie.scrape(s)
-		latestTorrents = append(latestTorrents, scrapedMovie)
+		siteMovie := SiteMovie{}
+		err := siteMovie.scrape(s)
+		latestTorrents = append(latestTorrents, siteMovie)
 		scrapingErrs = append(scrapingErrs, err)
 	})
 
 	upcomingMovieSel.Each(func(i int, s *goquery.Selection) {
-		upcomingMovie := ScrapedUpcomingMovie{}
+		upcomingMovie := SiteUpcomingMovie{}
 		err := upcomingMovie.scrape(s)
 		upcomingMovies = append(upcomingMovies, upcomingMovie)
 		scrapingErrs = append(scrapingErrs, err)

@@ -176,7 +176,7 @@ func (c *Client) GetMovieSuggestions(ctx context.Context, movieID int) (
 }
 
 type TrendingMoviesData struct {
-	Movies []ScrapedMovie `json:"movies"`
+	Movies []SiteMovie `json:"movies"`
 }
 
 type TrendingMoviesResponse struct {
@@ -203,9 +203,9 @@ func (c *Client) GetTrendingMovies(ctx context.Context) (
 }
 
 type HomePageContentData struct {
-	Popular  []ScrapedMovie
-	Latest   []ScrapedMovie
-	Upcoming []ScrapedUpcomingMovie
+	Popular  []SiteMovie
+	Latest   []SiteMovie
+	Upcoming []SiteUpcomingMovie
 }
 
 type HomePageContentResponse struct {
