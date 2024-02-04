@@ -70,10 +70,6 @@ func (smb *SiteMovieBase) validateScraping() error {
 		}
 	}
 
-	if err == nil && genreErrs == nil {
-		return nil
-	}
-
 	return errors.Join(err, genreErrs)
 }
 
@@ -103,12 +99,7 @@ func (smb *SiteMovieBase) scrape(s *goquery.Selection) error {
 	smb.Link = link
 	smb.Image = image
 	smb.Genres = genres
-
-	if err := smb.validateScraping(); err != nil {
-		return err
-	}
-
-	return nil
+	return smb.validateScraping()
 }
 
 type SiteMovie struct {
@@ -134,10 +125,6 @@ func (sm *SiteMovie) validateScraping() error {
 			validateRatingRule,
 		),
 	)
-	if bErr == nil && mErr == nil {
-		return nil
-	}
-
 	return errors.Join(bErr, mErr)
 }
 
@@ -149,11 +136,7 @@ func (sm *SiteMovie) scrape(s *goquery.Selection) error {
 
 	sm.Rating = rating
 	_ = sm.SiteMovieBase.scrape(s)
-	if err := sm.validateScraping(); err != nil {
-		return err
-	}
-
-	return nil
+	return sm.validateScraping()
 }
 
 type SiteUpcomingMovie struct {
@@ -173,10 +156,6 @@ func (sum *SiteUpcomingMovie) validateScraping() error {
 			validation.Max(maxProgress),
 		),
 	)
-	if bErr == nil && mErr == nil {
-		return nil
-	}
-
 	return errors.Join(bErr, mErr)
 }
 
@@ -199,11 +178,7 @@ func (sum *SiteUpcomingMovie) scrape(s *goquery.Selection) error {
 	sum.Progress = progressInt
 	sum.Quality = quality
 	_ = sum.SiteMovieBase.scrape(s)
-	if err := sum.validateScraping(); err != nil {
-		return err
-	}
-
-	return nil
+	return sum.validateScraping()
 }
 
 func (c *Client) scrapeTrendingMoviesData(r io.Reader) (*TrendingMoviesData, error) {

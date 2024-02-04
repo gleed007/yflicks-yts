@@ -148,7 +148,7 @@ func (f *SearchMoviesFilters) validateFilters() error {
 		maxLimit     = 50
 	)
 
-	err := validation.ValidateStruct(
+	return validation.ValidateStruct(
 		f,
 		validation.Field(
 			&f.Limit,
@@ -201,12 +201,6 @@ func (f *SearchMoviesFilters) validateFilters() error {
 			validation.In(true, false),
 		),
 	)
-
-	if err == nil {
-		return nil
-	}
-
-	return err
 }
 
 func (f *SearchMoviesFilters) getQueryString() (string, error) {
