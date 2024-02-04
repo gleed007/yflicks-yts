@@ -23,9 +23,12 @@ const (
 	TimeoutLimitLower = 5 * time.Second
 )
 
+var debug = newLogger()
+
 type ClientConfig struct {
 	TorrentTrackers []string
 	RequestTimeout  time.Duration
+	Debug           bool
 }
 
 type Client struct {
@@ -74,10 +77,12 @@ func NewClient(config ClientConfig) *Client {
 	if config.RequestTimeout < TimeoutLimitLower {
 		panic(ErrInvalidClientTimeout)
 	}
+
 	if TimeoutLimitUpper < config.RequestTimeout {
 		panic(ErrInvalidClientTimeout)
 	}
 
+	debug.setDebug(config.Debug)
 	config.TorrentTrackers = append(
 		config.TorrentTrackers,
 		defaultTorrentTrackers()...,
