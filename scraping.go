@@ -98,19 +98,16 @@ func (smb *SiteMovieBase) scrape(s *goquery.Selection) error {
 		genres = append(genres, Genre(s.Text()))
 	})
 
-	siteMovieBase := SiteMovieBase{
-		Title:  bottom.Find(movieTitleCSS).Text(),
-		Year:   yearInt,
-		Link:   link,
-		Image:  image,
-		Genres: genres,
-	}
+	smb.Title = bottom.Find(movieTitleCSS).Text()
+	smb.Year = yearInt
+	smb.Link = link
+	smb.Image = image
+	smb.Genres = genres
 
-	if err := siteMovieBase.validateScraping(); err != nil {
+	if err := smb.validateScraping(); err != nil {
 		return wrapErr(ErrSiteScrapingFailure, err)
 	}
 
-	*smb = siteMovieBase
 	return nil
 }
 
@@ -150,14 +147,12 @@ func (sm *SiteMovie) scrape(s *goquery.Selection) error {
 		rating = anchor.Find("h4.rating").Text()
 	)
 
-	siteMovie := SiteMovie{}
-	siteMovie.Rating = rating
-	_ = siteMovie.SiteMovieBase.scrape(s)
-	if err := siteMovie.validateScraping(); err != nil {
+	sm.Rating = rating
+	_ = sm.SiteMovieBase.scrape(s)
+	if err := sm.validateScraping(); err != nil {
 		return wrapErr(ErrSiteScrapingFailure, err)
 	}
 
-	*sm = siteMovie
 	return nil
 }
 
@@ -201,15 +196,13 @@ func (sum *SiteUpcomingMovie) scrape(s *goquery.Selection) error {
 		quality = Quality(yearText[1])
 	}
 
-	upcomingMovie := SiteUpcomingMovie{}
-	upcomingMovie.Progress = progressInt
-	upcomingMovie.Quality = quality
-	_ = upcomingMovie.SiteMovieBase.scrape(s)
-	if err := upcomingMovie.validateScraping(); err != nil {
+	sum.Progress = progressInt
+	sum.Quality = quality
+	_ = sum.SiteMovieBase.scrape(s)
+	if err := sum.validateScraping(); err != nil {
 		return wrapErr(ErrSiteScrapingFailure, err)
 	}
 
-	*sum = upcomingMovie
 	return nil
 }
 
@@ -233,6 +226,10 @@ func (c *Client) scrapeTrendingMoviesData(r io.Reader) (*TrendingMoviesData, err
 	selection.Each(func(i int, s *goquery.Selection) {
 		siteMovie := SiteMovie{}
 		err := siteMovie.scrape(s)
+		if err != nil {
+			err = fmt.Errorf("trending, i=%d, %w", i, err)
+		}
+
 		trendingMovies = append(trendingMovies, siteMovie)
 		scrapingErrs = append(scrapingErrs, err)
 	})
@@ -281,6 +278,10 @@ func (c *Client) scrapeHomePageContentData(r io.Reader) (*HomePageContentData, e
 	popDownloadSel.Each(func(i int, s *goquery.Selection) {
 		siteMovie := SiteMovie{}
 		err := siteMovie.scrape(s)
+		if err != nil {
+			err = fmt.Errorf("popular, i=%d, %w", i, err)
+		}
+
 		popDownloads = append(popDownloads, siteMovie)
 		scrapingErrs = append(scrapingErrs, err)
 	})
@@ -288,6 +289,10 @@ func (c *Client) scrapeHomePageContentData(r io.Reader) (*HomePageContentData, e
 	latestTorrentSel.Each(func(i int, s *goquery.Selection) {
 		siteMovie := SiteMovie{}
 		err := siteMovie.scrape(s)
+		if err != nil {
+			err = fmt.Errorf("latest, i=%d, %w", i, err)
+		}
+
 		latestTorrents = append(latestTorrents, siteMovie)
 		scrapingErrs = append(scrapingErrs, err)
 	})
@@ -295,6 +300,10 @@ func (c *Client) scrapeHomePageContentData(r io.Reader) (*HomePageContentData, e
 	upcomingMovieSel.Each(func(i int, s *goquery.Selection) {
 		upcomingMovie := SiteUpcomingMovie{}
 		err := upcomingMovie.scrape(s)
+		if err != nil {
+			err = fmt.Errorf("upcoming, i=%d, %w", i, err)
+		}
+
 		upcomingMovies = append(upcomingMovies, upcomingMovie)
 		scrapingErrs = append(scrapingErrs, err)
 	})
