@@ -74,7 +74,7 @@ func (smb *SiteMovieBase) validateScraping() error {
 		return nil
 	}
 
-	return wrapErr(ErrValidationFailure, err, genreErrs)
+	return errors.Join(err, genreErrs)
 }
 
 func (smb *SiteMovieBase) scrape(s *goquery.Selection) error {
@@ -105,7 +105,7 @@ func (smb *SiteMovieBase) scrape(s *goquery.Selection) error {
 	smb.Genres = genres
 
 	if err := smb.validateScraping(); err != nil {
-		return wrapErr(ErrSiteScrapingFailure, err)
+		return err
 	}
 
 	return nil
@@ -138,7 +138,7 @@ func (sm *SiteMovie) validateScraping() error {
 		return nil
 	}
 
-	return wrapErr(ErrValidationFailure, bErr, mErr)
+	return errors.Join(bErr, mErr)
 }
 
 func (sm *SiteMovie) scrape(s *goquery.Selection) error {
@@ -150,7 +150,7 @@ func (sm *SiteMovie) scrape(s *goquery.Selection) error {
 	sm.Rating = rating
 	_ = sm.SiteMovieBase.scrape(s)
 	if err := sm.validateScraping(); err != nil {
-		return wrapErr(ErrSiteScrapingFailure, err)
+		return err
 	}
 
 	return nil
@@ -177,7 +177,7 @@ func (sum *SiteUpcomingMovie) validateScraping() error {
 		return nil
 	}
 
-	return wrapErr(ErrValidationFailure, bErr, mErr)
+	return errors.Join(bErr, mErr)
 }
 
 func (sum *SiteUpcomingMovie) scrape(s *goquery.Selection) error {
@@ -200,7 +200,7 @@ func (sum *SiteUpcomingMovie) scrape(s *goquery.Selection) error {
 	sum.Quality = quality
 	_ = sum.SiteMovieBase.scrape(s)
 	if err := sum.validateScraping(); err != nil {
-		return wrapErr(ErrSiteScrapingFailure, err)
+		return err
 	}
 
 	return nil
@@ -209,13 +209,15 @@ func (sum *SiteUpcomingMovie) scrape(s *goquery.Selection) error {
 func (c *Client) scrapeTrendingMoviesData(r io.Reader) (*TrendingMoviesData, error) {
 	document, err := goquery.NewDocumentFromReader(r)
 	if err != nil {
+		debug.Println(err)
 		return nil, err
 	}
 
 	selection := document.Find(trendingCSS)
 	if selection.Length() == 0 {
 		err := fmt.Errorf("no elements found for %q", trendingCSS)
-		return nil, wrapErr(ErrSiteScrapingFailure, err)
+		debug.Println(err)
+		return nil, err
 	}
 
 	var (
@@ -235,6 +237,7 @@ func (c *Client) scrapeTrendingMoviesData(r io.Reader) (*TrendingMoviesData, err
 	})
 
 	if err := errors.Join(scrapingErrs...); err != nil {
+		debug.Println(err)
 		return nil, err
 	}
 
@@ -244,6 +247,7 @@ func (c *Client) scrapeTrendingMoviesData(r io.Reader) (*TrendingMoviesData, err
 func (c *Client) scrapeHomePageContentData(r io.Reader) (*HomePageContentData, error) {
 	document, err := goquery.NewDocumentFromReader(r)
 	if err != nil {
+		debug.Println(err)
 		return nil, err
 	}
 
@@ -255,17 +259,20 @@ func (c *Client) scrapeHomePageContentData(r io.Reader) (*HomePageContentData, e
 
 	if popDownloadSel.Length() == 0 {
 		err := fmt.Errorf("no elements found for %q", popularCSS)
-		return nil, wrapErr(ErrSiteScrapingFailure, err)
+		debug.Println(err)
+		return nil, err
 	}
 
 	if latestTorrentSel.Length() == 0 {
 		err := fmt.Errorf("no elements found for %q", latestCSS)
-		return nil, wrapErr(ErrSiteScrapingFailure, err)
+		debug.Println(err)
+		return nil, err
 	}
 
 	if upcomingMovieSel.Length() == 0 {
 		err := fmt.Errorf("no elements found for %q", upcomingCSS)
-		return nil, wrapErr(ErrSiteScrapingFailure, err)
+		debug.Println(err)
+		return nil, err
 	}
 
 	var (
@@ -309,6 +316,7 @@ func (c *Client) scrapeHomePageContentData(r io.Reader) (*HomePageContentData, e
 	})
 
 	if err := errors.Join(scrapingErrs...); err != nil {
+		debug.Println(err)
 		return nil, err
 	}
 

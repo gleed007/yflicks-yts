@@ -46,8 +46,9 @@ type BaseResponse struct {
 }
 
 var (
-	ErrSiteScrapingFailure    = errors.New("invalid_site_scraping_failure")
-	ErrQualityTorrentNotFound = errors.New("quality_torrent_not_found")
+	ErrQualityTorrentNotFound  = errors.New("quality_torrent_not_found")
+	ErrContentRetrievalFailure = errors.New("content_retrieval_failure")
+	ErrFilterValidationFailure = errors.New("filter_validation_failure")
 )
 
 var ErrInvalidClientTimeout = fmt.Errorf(
@@ -114,7 +115,7 @@ func (c *Client) SearchMovies(ctx context.Context, filters *SearchMoviesFilters)
 ) {
 	queryString, err := filters.getQueryString()
 	if err != nil {
-		return nil, err
+		return nil, wrapErr(ErrFilterValidationFailure, err)
 	}
 
 	parsedPayload := &SearchMoviesResponse{}
@@ -141,7 +142,7 @@ func (c *Client) GetMovieDetails(ctx context.Context, movieID int, filters *Movi
 ) {
 	if movieID <= 0 {
 		err := fmt.Errorf("provided movieID must be at least 1")
-		return nil, wrapErr(ErrValidationFailure, err)
+		return nil, wrapErr(ErrFilterValidationFailure, err)
 	}
 
 	queryString := fmt.Sprintf("movie_id=%d", movieID)
@@ -174,7 +175,7 @@ func (c *Client) GetMovieSuggestions(ctx context.Context, movieID int) (
 ) {
 	if movieID <= 0 {
 		err := fmt.Errorf("provided movieID must be at least 1")
-		return nil, wrapErr(ErrValidationFailure, err)
+		return nil, wrapErr(ErrFilterValidationFailure, err)
 	}
 
 	var (
@@ -214,7 +215,7 @@ func (c *Client) GetTrendingMovies(ctx context.Context) (
 	reader := strings.NewReader(string(rawPayload))
 	data, err := c.scrapeTrendingMoviesData(reader)
 	if err != nil {
-		return nil, err
+		return nil, ErrContentRetrievalFailure
 	}
 
 	return &TrendingMoviesResponse{*data}, nil
@@ -242,7 +243,7 @@ func (c *Client) GetHomePageContent(ctx context.Context) (
 	reader := strings.NewReader(string(rawPayload))
 	data, err := c.scrapeHomePageContentData(reader)
 	if err != nil {
-		return nil, err
+		return nil, ErrContentRetrievalFailure
 	}
 
 	return &HomePageContentResponse{*data}, nil

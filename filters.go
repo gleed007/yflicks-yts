@@ -1,7 +1,6 @@
 package yts
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 
@@ -70,11 +69,6 @@ type OrderBy string
 const (
 	OrderByAsc  OrderBy = "asc"
 	OrderByDesc OrderBy = "desc"
-)
-
-var (
-	ErrValidationFailure       = errors.New("validation_failure")
-	ErrStructValidationFailure = errors.New("struct_validation_failure")
 )
 
 var validateGenreRule = validation.In(
@@ -212,7 +206,7 @@ func (f *SearchMoviesFilters) validateFilters() error {
 		return nil
 	}
 
-	return wrapErr(ErrStructValidationFailure, err)
+	return err
 }
 
 func (f *SearchMoviesFilters) getQueryString() (string, error) {
