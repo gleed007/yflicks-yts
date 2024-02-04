@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	DefaultAPIBaseURL = "https://yts.mx/api/v2"
-	DefaultSiteURL    = "https://yts.mx"
-	DefaultSiteDomain = "yts.mx"
+	defaultAPIBaseURL = "https://yts.mx/api/v2"
+	defaultSiteURL    = "https://yts.mx"
+	defaultSiteDomain = "yts.mx"
 )
 
 const (
@@ -23,12 +23,17 @@ const (
 	TimeoutLimitLower = 5 * time.Second
 )
 
-type Client struct {
-	APIBaseURL      string
-	SiteURL         string
-	SiteDomain      string
-	NetClient       *http.Client
+type ClientConfig struct {
 	TorrentTrackers []string
+	RequestTimeout  time.Duration
+}
+
+type Client struct {
+	ClientConfig
+	apiBaseURL string
+	siteURL    string
+	siteDomain string
+	netClient  *http.Client
 }
 
 type BaseResponse struct {
@@ -52,21 +57,7 @@ func wrapErr(sentinel error, others ...error) error {
 	return fmt.Errorf("%w: %s", sentinel, errors.Join(others...))
 }
 
-func NewClient(timeout time.Duration) *Client {
-	if timeout < TimeoutLimitLower || TimeoutLimitUpper < timeout {
-		panic(ErrInvalidClientTimeout)
-	}
-
-	return &Client{
-		DefaultAPIBaseURL,
-		DefaultSiteURL,
-		DefaultSiteDomain,
-		&http.Client{Timeout: timeout},
-		DefaultTorrentTrackers(),
-	}
-}
-
-func DefaultTorrentTrackers() []string {
+func defaultTorrentTrackers() []string {
 	return []string{
 		"udp://open.demonii.com:1337/announce",
 		"udp://tracker.openbittorrent.com:80",
@@ -76,6 +67,28 @@ func DefaultTorrentTrackers() []string {
 		"udp://torrent.gresille.org:80/announce",
 		"udp://p4p.arenabg.com:1337",
 		"udp://tracker.leechers-paradise.org:6969",
+	}
+}
+
+func NewClient(config ClientConfig) *Client {
+	if config.RequestTimeout < TimeoutLimitLower {
+		panic(ErrInvalidClientTimeout)
+	}
+	if TimeoutLimitUpper < config.RequestTimeout {
+		panic(ErrInvalidClientTimeout)
+	}
+
+	config.TorrentTrackers = append(
+		config.TorrentTrackers,
+		defaultTorrentTrackers()...,
+	)
+
+	return &Client{
+		config,
+		defaultAPIBaseURL,
+		defaultSiteURL,
+		defaultSiteDomain,
+		&http.Client{Timeout: config.RequestTimeout},
 	}
 }
 
@@ -187,7 +200,7 @@ func (c *Client) GetTrendingMovies(ctx context.Context) (
 	*TrendingMoviesResponse, error,
 ) {
 	var rawPayload []byte
-	pageURL := fmt.Sprintf("%s/trending-movies", c.SiteURL)
+	pageURL := fmt.Sprintf("%s/trending-movies", c.siteURL)
 	rawPayload, err := c.getPayloadRaw(ctx, pageURL)
 	if err != nil {
 		return nil, err
@@ -216,7 +229,7 @@ func (c *Client) GetHomePageContent(ctx context.Context) (
 	*HomePageContentResponse, error,
 ) {
 	var rawPayload []byte
-	rawPayload, err := c.getPayloadRaw(ctx, c.SiteURL)
+	rawPayload, err := c.getPayloadRaw(ctx, c.siteURL)
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +262,7 @@ func (c *Client) GetMagnetLink(t TorrentInfoGetter, q Quality) (string, error) {
 
 	torrentName := fmt.Sprintf(
 		"%s+[%s]+[%s]",
-		torrentInfo.MovieTitle, q, strings.ToUpper(c.SiteDomain),
+		torrentInfo.MovieTitle, q, strings.ToUpper(c.siteDomain),
 	)
 
 	var trackers = url.Values{}
@@ -295,7 +308,7 @@ func (c *Client) getPayloadRaw(ctx context.Context, targetURL string) (
 		return nil, err
 	}
 
-	response, err := c.NetClient.Do(request)
+	response, err := c.netClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +323,7 @@ func (c *Client) getPayloadRaw(ctx context.Context, targetURL string) (
 }
 
 func (c *Client) getEndpointURL(path, query string) string {
-	targetURL := fmt.Sprintf("%s/%s", c.APIBaseURL, path)
+	targetURL := fmt.Sprintf("%s/%s", c.apiBaseURL, path)
 	if query == "" {
 		return targetURL
 	}
