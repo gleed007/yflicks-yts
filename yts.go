@@ -32,17 +32,9 @@ type ClientConfig struct {
 	Debug           bool
 }
 
-type TorrentMagnets map[Quality]string
-
 type Client struct {
 	config    ClientConfig
 	netClient *http.Client
-}
-
-type BaseResponse struct {
-	Status        string `json:"status"`
-	StatusMessage string `json:"status_message"`
-	Meta          `json:"@meta"`
 }
 
 var (
@@ -115,6 +107,12 @@ type SearchMoviesData struct {
 	Limit      int     `json:"limit"`
 	PageNumber int     `json:"page_number"`
 	Movies     []Movie `json:"movies"`
+}
+
+type BaseResponse struct {
+	Status        string `json:"status"`
+	StatusMessage string `json:"status_message"`
+	Meta          `json:"@meta"`
 }
 
 type SearchMoviesResponse struct {
@@ -258,6 +256,8 @@ func (c *Client) GetHomePageContent(ctx context.Context) (
 
 	return &HomePageContentResponse{*data}, nil
 }
+
+type TorrentMagnets map[Quality]string
 
 func (c *Client) GetMagnetLinks(t TorrentInfoGetter) TorrentMagnets {
 	var trackers = url.Values{}
