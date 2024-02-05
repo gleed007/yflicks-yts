@@ -1,5 +1,18 @@
 # Changelog
 
+<a name="v0.9.1"></a>
+## [v0.9.1](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.9.0...v0.9.1) (2024-02-06)
+
+### Refactor
+
+* implementation for parsing JSON payload for API endpoints
+* scraping methods can now use request.Body directly
+
+### Pull Requests
+
+* Merge pull request [#11](https://github.com/atifcppprogrammer/yflicks-yts/issues/11) from atifcppprogrammer/refactor/network-utils
+
+
 <a name="v0.9.0"></a>
 ## [v0.9.0](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.8.3...v0.9.0) (2024-02-05)
 
