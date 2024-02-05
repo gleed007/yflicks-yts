@@ -1,4 +1,4 @@
-.PHONY: setup test build format
+.PHONY: setup test test_coverage build format
 
 setup: 
 	@cp githooks/* .git/hooks
