@@ -218,15 +218,14 @@ type TrendingMoviesResponse struct {
 func (c *Client) GetTrendingMovies(ctx context.Context) (
 	*TrendingMoviesResponse, error,
 ) {
-	var rawPayload []byte
 	pageURL := fmt.Sprintf("%s/trending-movies", c.config.SiteURL)
-	rawPayload, err := c.getPayloadRaw(ctx, pageURL)
+	response, err := c.newRequestWithContext(ctx, pageURL)
 	if err != nil {
 		return nil, err
 	}
 
-	reader := strings.NewReader(string(rawPayload))
-	data, err := c.scrapeTrendingMoviesData(reader)
+	defer response.Body.Close()
+	data, err := c.scrapeTrendingMoviesData(response.Body)
 	if err != nil {
 		return nil, ErrContentRetrievalFailure
 	}
@@ -247,14 +246,13 @@ type HomePageContentResponse struct {
 func (c *Client) GetHomePageContent(ctx context.Context) (
 	*HomePageContentResponse, error,
 ) {
-	var rawPayload []byte
-	rawPayload, err := c.getPayloadRaw(ctx, c.config.SiteURL)
+	response, err := c.newRequestWithContext(ctx, c.config.SiteURL)
 	if err != nil {
 		return nil, err
 	}
 
-	reader := strings.NewReader(string(rawPayload))
-	data, err := c.scrapeHomePageContentData(reader)
+	defer response.Body.Close()
+	data, err := c.scrapeHomePageContentData(response.Body)
 	if err != nil {
 		return nil, ErrContentRetrievalFailure
 	}
