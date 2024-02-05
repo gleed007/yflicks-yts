@@ -34,6 +34,8 @@ type ClientConfig struct {
 	Debug           bool
 }
 
+type TorrentMagnets map[Quality]string
+
 type Client struct {
 	config    ClientConfig
 	netClient *http.Client
@@ -46,7 +48,6 @@ type BaseResponse struct {
 }
 
 var (
-	ErrQualityTorrentNotFound  = errors.New("quality_torrent_not_found")
 	ErrContentRetrievalFailure = errors.New("content_retrieval_failure")
 	ErrFilterValidationFailure = errors.New("filter_validation_failure")
 )
@@ -262,39 +263,35 @@ func (c *Client) GetHomePageContent(ctx context.Context) (
 	return &HomePageContentResponse{*data}, nil
 }
 
-func (c *Client) GetMagnetLink(t TorrentInfoGetter, q Quality) (string, error) {
-	var (
-		foundTorrent = Torrent{}
-		torrentInfo  = t.GetTorrentInfo()
-	)
-
-	for index := 0; index < len(torrentInfo.Torrents); index++ {
-		if torrentInfo.Torrents[index].Quality == q {
-			foundTorrent = torrentInfo.Torrents[index]
-		}
-	}
-
-	if foundTorrent.Quality == "" {
-		err := fmt.Errorf("no torrent found having quality %s", q)
-		return "", wrapErr(ErrQualityTorrentNotFound, err)
-	}
-
-	torrentName := fmt.Sprintf(
-		"%s+[%s]+[%s]",
-		torrentInfo.MovieTitle, q, strings.ToUpper(c.config.SiteDomain),
-	)
-
+func (c *Client) GetMagnetLinks(t TorrentInfoGetter) TorrentMagnets {
 	var trackers = url.Values{}
 	for _, tracker := range c.config.TorrentTrackers {
 		trackers.Add("tr", tracker)
 	}
 
-	magnet := fmt.Sprintf(
-		"magnet:?xt=urn:btih:%s&dn=%s&%s",
-		foundTorrent.Hash, url.QueryEscape(torrentName), trackers.Encode(),
-	)
+	getMagnetFor := func(torrent Torrent) string {
+		torrentName := fmt.Sprintf(
+			"%s+[%s]+[%s]",
+			t.GetTorrentInfo().MovieTitle,
+			torrent.Quality,
+			strings.ToUpper(c.config.SiteDomain),
+		)
 
-	return magnet, nil
+		return fmt.Sprintf(
+			"magnet:?xt=urn:btih:%s&dn=%s&%s",
+			torrent.Hash,
+			url.QueryEscape(torrentName),
+			trackers.Encode(),
+		)
+	}
+
+	magnets := make(TorrentMagnets, 0)
+	torrents := t.GetTorrentInfo().Torrents
+	for i := 0; i < len(torrents); i++ {
+		magnets[torrents[i].Quality] = getMagnetFor(torrents[i])
+	}
+
+	return magnets
 }
 
 func (c *Client) getPayloadJSON(
