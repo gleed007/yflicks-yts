@@ -1,5 +1,36 @@
 # Changelog
 
+<a name="v0.9.0"></a>
+## [v0.9.0](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.8.3...v0.9.0) (2024-02-05)
+
+### Feat
+
+* improved messages for scraping errors
+* scraping "Quality" for upcoming movies
+* collecting available genres when scraping movies
+* **client:** created logger for logging implementation details in "debug" mode
+
+### Fix
+
+* "Rating" and "Progress" fields are not always available
+* YTS accepts "all" value for genre and quality filters
+* cleaning extraction of `year` field before use
+* removed "genre=All" query from `DefaultSearchMovieFilters`
+
+### Refactor
+
+* renamed prefix for scraping types from "Scraped" to "Site"
+* removed extraneous method `validateFilters` for `MovieDetailsFilters`
+* validation errors should be wrapped in validating method
+* co-located response types with corresponding methods in `yts.go`
+* made `GetMagnetLink` method of `Client` struct
+* implemented filters validation using "ozzo-validation"
+
+### Pull Requests
+
+* Merge pull request [#8](https://github.com/atifcppprogrammer/yflicks-yts/issues/8) from atifcppprogrammer/feature/improve-lib
+
+
 <a name="v0.8.3"></a>
 ## [v0.8.3](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.8.2...v0.8.3) (2024-01-26)
 
