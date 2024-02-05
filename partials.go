@@ -1,41 +1,43 @@
 package yts
 
-import (
-	"fmt"
-	"net/url"
-)
-
-type Movie struct {
-	MoviePartial
-	Summary  string `json:"summary"`
-	Synopsis string `json:"synopsis"`
-	State    string `json:"state"`
+type Meta struct {
+	ServerTime     int    `json:"server_time"`
+	ServerTimezone string `json:"server_timezone"`
+	APIVersion     int    `json:"api_version"`
+	ExecutionTime  string `json:"execution_time"`
 }
 
-type ScrapedMovie struct {
-	Title  string `json:"title"`
-	Year   int    `json:"year"`
-	Link   string `json:"link"`
-	Image  string `json:"image"`
-	Rating string `json:"rating"`
+type Cast struct {
+	Name          string `json:"name"`
+	CharacterName string `json:"character_name"`
+	ImdbCode      string `json:"imdb_code"`
+	URLSmallImage string `json:"url_small_image"`
 }
 
-type ScrapedUpcomingMovie struct {
-	ScrapedMovie
-	Progress int `json:"progress"`
+type Torrent struct {
+	URL              string  `json:"url"`
+	Hash             string  `json:"hash"`
+	Quality          Quality `json:"quality"`
+	Type             string  `json:"type"`
+	IsRepack         string  `json:"is_repack"`
+	VideoCodec       string  `json:"video_codec"`
+	BitDepth         string  `json:"bit_depth"`
+	AudioChannels    string  `json:"audio_channels"`
+	Seeds            int     `json:"seeds"`
+	Peers            int     `json:"peers"`
+	Size             string  `json:"size"`
+	SizeBytes        int     `json:"size_bytes"`
+	DateUploaded     string  `json:"date_uploaded"`
+	DateUploadedUnix int     `json:"date_uploaded_unix"`
 }
 
-type MovieDetails struct {
-	MoviePartial
-	LikeCount              int    `json:"like_count"`
-	DescriptionIntro       string `json:"description_intro"`
-	MediumScreenshotImage1 string `json:"medium_screenshot_image1"`
-	MediumScreenshotImage2 string `json:"medium_screenshot_image2"`
-	MediumScreenshotImage3 string `json:"medium_screenshot_image3"`
-	LargeScreenshotImage1  string `json:"large_screenshot_image1"`
-	LargeScreenshotImage2  string `json:"large_screenshot_image2"`
-	LargeScreenshotImage3  string `json:"large_screenshot_image3"`
-	Cast                   []Cast `json:"cast"`
+type TorrentInfo struct {
+	MovieTitle string
+	Torrents   []Torrent
+}
+
+type TorrentInfoGetter interface {
+	GetTorrentInfo() *TorrentInfo
 }
 
 type MoviePartial struct {
@@ -64,84 +66,26 @@ type MoviePartial struct {
 	DateUploadedUnix        int       `json:"date_uploaded_unix"`
 }
 
-type Torrent struct {
-	URL              string  `json:"url"`
-	Hash             string  `json:"hash"`
-	Quality          Quality `json:"quality"`
-	Type             string  `json:"type"`
-	IsRepack         string  `json:"is_repack"`
-	VideoCodec       string  `json:"video_codec"`
-	BitDepth         string  `json:"bit_depth"`
-	AudioChannels    string  `json:"audio_channels"`
-	Seeds            int     `json:"seeds"`
-	Peers            int     `json:"peers"`
-	Size             string  `json:"size"`
-	SizeBytes        int     `json:"size_bytes"`
-	DateUploaded     string  `json:"date_uploaded"`
-	DateUploadedUnix int     `json:"date_uploaded_unix"`
+func (mp *MoviePartial) GetTorrentInfo() *TorrentInfo {
+	return &TorrentInfo{mp.TitleLong, mp.Torrents}
 }
 
-type Cast struct {
-	Name          string `json:"name"`
-	CharacterName string `json:"character_name"`
-	ImdbCode      string `json:"imdb_code"`
-	URLSmallImage string `json:"url_small_image"`
+type Movie struct {
+	MoviePartial
+	Summary  string `json:"summary"`
+	Synopsis string `json:"synopsis"`
+	State    string `json:"state"`
 }
 
-type Meta struct {
-	ServerTime     int    `json:"server_time"`
-	ServerTimezone string `json:"server_timezone"`
-	APIVersion     int    `json:"api_version"`
-	ExecutionTime  string `json:"execution_time"`
-}
-
-func DefaultTorrentTrackerList() []string {
-	return []string{
-		"udp://open.demonii.com:1337/announce",
-		"udp://tracker.openbittorrent.com:80",
-		"udp://tracker.coppersurfer.tk:6969",
-		"udp://glotorrents.pw:6969/announce",
-		"udp://tracker.opentrackr.org:1337/announce",
-		"udp://torrent.gresille.org:80/announce",
-		"udp://p4p.arenabg.com:1337",
-		"udp://tracker.leechers-paradise.org:6969",
-	}
-}
-
-func (mp *MoviePartial) GetMagnet(q Quality) (string, error) {
-	var foundTorrent Torrent
-	for i := 0; i < len(mp.Torrents); i++ {
-		if mp.Torrents[i].Quality == q {
-			foundTorrent = mp.Torrents[i]
-			break
-		}
-	}
-
-	if foundTorrent.Quality == "" {
-		return "", fmt.Errorf("no torrent found having quality %s", q)
-	}
-
-	movieName := fmt.Sprintf(
-		"%s+[%s]+[YTS.MX]",
-		mp.TitleLong,
-		foundTorrent.Quality,
-	)
-
-	var (
-		defaultTrackers = DefaultTorrentTrackerList()
-		trackers        = url.Values{}
-	)
-
-	for _, tracker := range defaultTrackers {
-		trackers.Add("tr", tracker)
-	}
-
-	magnet := fmt.Sprintf(
-		"magnet:?xt=urn:btih:%s&dn=%s&%s",
-		foundTorrent.Hash,
-		url.QueryEscape(movieName),
-		trackers.Encode(),
-	)
-
-	return magnet, nil
+type MovieDetails struct {
+	MoviePartial
+	LikeCount              int    `json:"like_count"`
+	DescriptionIntro       string `json:"description_intro"`
+	MediumScreenshotImage1 string `json:"medium_screenshot_image1"`
+	MediumScreenshotImage2 string `json:"medium_screenshot_image2"`
+	MediumScreenshotImage3 string `json:"medium_screenshot_image3"`
+	LargeScreenshotImage1  string `json:"large_screenshot_image1"`
+	LargeScreenshotImage2  string `json:"large_screenshot_image2"`
+	LargeScreenshotImage3  string `json:"large_screenshot_image3"`
+	Cast                   []Cast `json:"cast"`
 }

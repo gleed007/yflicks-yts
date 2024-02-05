@@ -8,42 +8,127 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
-
-	"github.com/PuerkitoBio/goquery"
 )
 
 const (
-	APIBaseURL = "https://yts.mx/api/v2"
-	SiteURL    = "https://yts.mx"
+	DefaultAPIBaseURL = "https://yts.mx/api/v2"
+	DefaultSiteURL    = "https://yts.mx"
+	DefaultSiteDomain = "yts.mx"
 )
 
+const (
+	TimeoutLimitUpper = 5 * time.Minute
+	TimeoutLimitLower = 5 * time.Second
+)
+
+var debug = newLogger()
+
+type ClientConfig struct {
+	APIBaseURL      string
+	SiteURL         string
+	SiteDomain      string
+	TorrentTrackers []string
+	RequestTimeout  time.Duration
+	Debug           bool
+}
+
 type Client struct {
-	baseURL   string
-	siteURL   string
+	config    ClientConfig
 	netClient *http.Client
 }
 
-func NewClient(timeout time.Duration) *Client {
-	if timeout < time.Second*5 || time.Minute*5 < timeout {
-		panic(errors.New("YTS client timeout must be between 5 and 300 seconds inclusive"))
-	}
+type BaseResponse struct {
+	Status        string `json:"status"`
+	StatusMessage string `json:"status_message"`
+	Meta          `json:"@meta"`
+}
 
-	return &Client{
-		APIBaseURL,
-		SiteURL,
-		&http.Client{Timeout: timeout},
+var (
+	ErrQualityTorrentNotFound  = errors.New("quality_torrent_not_found")
+	ErrContentRetrievalFailure = errors.New("content_retrieval_failure")
+	ErrFilterValidationFailure = errors.New("filter_validation_failure")
+)
+
+var ErrInvalidClientTimeout = fmt.Errorf(
+	`invalid_client_timeout: "yts client timeout must be between %s and %s inclusive"`,
+	TimeoutLimitLower,
+	TimeoutLimitUpper,
+)
+
+func wrapErr(sentinel error, others ...error) error {
+	return fmt.Errorf("%w: %s", sentinel, errors.Join(others...))
+}
+
+func DefaultTorrentTrackers() []string {
+	return []string{
+		"udp://open.demonii.com:1337/announce",
+		"udp://tracker.openbittorrent.com:80",
+		"udp://tracker.coppersurfer.tk:6969",
+		"udp://glotorrents.pw:6969/announce",
+		"udp://tracker.opentrackr.org:1337/announce",
+		"udp://torrent.gresille.org:80/announce",
+		"udp://p4p.arenabg.com:1337",
+		"udp://tracker.leechers-paradise.org:6969",
 	}
 }
 
-func (c Client) SearchMovies(ctx context.Context, filters *SearchMoviesFilters) (
+func DefaultClientConfig() ClientConfig {
+	return ClientConfig{
+		APIBaseURL:      DefaultAPIBaseURL,
+		SiteURL:         DefaultSiteURL,
+		SiteDomain:      DefaultSiteDomain,
+		RequestTimeout:  time.Minute,
+		TorrentTrackers: DefaultTorrentTrackers(),
+		Debug:           false,
+	}
+}
+
+func NewClient() *Client {
+	config := DefaultClientConfig()
+	debug.setDebug(config.Debug)
+	netClient := &http.Client{Timeout: config.RequestTimeout}
+	return &Client{config, netClient}
+}
+
+func NewClientWithConfig(config *ClientConfig) *Client {
+	if config.RequestTimeout < TimeoutLimitLower {
+		panic(ErrInvalidClientTimeout)
+	}
+
+	if TimeoutLimitUpper < config.RequestTimeout {
+		panic(ErrInvalidClientTimeout)
+	}
+
+	config.TorrentTrackers = append(
+		config.TorrentTrackers,
+		DefaultTorrentTrackers()...,
+	)
+
+	debug.setDebug(config.Debug)
+	netClient := &http.Client{Timeout: config.RequestTimeout}
+	return &Client{*config, netClient}
+}
+
+type SearchMoviesData struct {
+	MovieCount int     `json:"movie_count"`
+	Limit      int     `json:"limit"`
+	PageNumber int     `json:"page_number"`
+	Movies     []Movie `json:"movies"`
+}
+
+type SearchMoviesResponse struct {
+	BaseResponse
+	Data SearchMoviesData `json:"data"`
+}
+
+func (c *Client) SearchMovies(ctx context.Context, filters *SearchMoviesFilters) (
 	*SearchMoviesResponse, error,
 ) {
 	queryString, err := filters.getQueryString()
 	if err != nil {
-		return nil, err
+		return nil, wrapErr(ErrFilterValidationFailure, err)
 	}
 
 	parsedPayload := &SearchMoviesResponse{}
@@ -56,17 +141,31 @@ func (c Client) SearchMovies(ctx context.Context, filters *SearchMoviesFilters) 
 	return parsedPayload, nil
 }
 
-func (c Client) GetMovieDetails(ctx context.Context, filters *MovieDetailsFilters) (
+type MovieDetailsData struct {
+	Movie MovieDetails `json:"movie"`
+}
+
+type MovieDetailsResponse struct {
+	BaseResponse
+	Data MovieDetailsData `json:"data"`
+}
+
+func (c *Client) GetMovieDetails(ctx context.Context, movieID int, filters *MovieDetailsFilters) (
 	*MovieDetailsResponse, error,
 ) {
-	queryString, err := filters.getQueryString()
-	if err != nil {
-		return nil, err
+	if movieID <= 0 {
+		err := fmt.Errorf("provided movieID must be at least 1")
+		return nil, wrapErr(ErrFilterValidationFailure, err)
+	}
+
+	queryString := fmt.Sprintf("movie_id=%d", movieID)
+	if q := filters.getQueryString(); q != "" {
+		queryString = fmt.Sprintf("movie_id=%d&%s", movieID, q)
 	}
 
 	parsedPayload := &MovieDetailsResponse{}
 	targetURL := c.getEndpointURL("movie_details.json", queryString)
-	err = c.getPayloadJSON(ctx, targetURL, parsedPayload)
+	err := c.getPayloadJSON(ctx, targetURL, parsedPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -74,11 +173,22 @@ func (c Client) GetMovieDetails(ctx context.Context, filters *MovieDetailsFilter
 	return parsedPayload, nil
 }
 
-func (c Client) GetMovieSuggestions(ctx context.Context, movieID int) (
+type MovieSuggestionsData struct {
+	MovieCount int     `json:"movie_count"`
+	Movies     []Movie `json:"movies"`
+}
+
+type MovieSuggestionsResponse struct {
+	BaseResponse
+	Data MovieSuggestionsData `json:"data"`
+}
+
+func (c *Client) GetMovieSuggestions(ctx context.Context, movieID int) (
 	*MovieSuggestionsResponse, error,
 ) {
 	if movieID <= 0 {
-		return nil, errors.New("provided movieID must be at least 1")
+		err := fmt.Errorf("provided movieID must be at least 1")
+		return nil, wrapErr(ErrFilterValidationFailure, err)
 	}
 
 	var (
@@ -97,139 +207,97 @@ func (c Client) GetMovieSuggestions(ctx context.Context, movieID int) (
 	return parsedPayload, nil
 }
 
-func (c Client) GetTrendingMovies(ctx context.Context) (
+type TrendingMoviesData struct {
+	Movies []SiteMovie `json:"movies"`
+}
+
+type TrendingMoviesResponse struct {
+	Data TrendingMoviesData `json:"data"`
+}
+
+func (c *Client) GetTrendingMovies(ctx context.Context) (
 	*TrendingMoviesResponse, error,
 ) {
 	var rawPayload []byte
-	pageURL := fmt.Sprintf("%s/trending-movies", c.siteURL)
+	pageURL := fmt.Sprintf("%s/trending-movies", c.config.SiteURL)
 	rawPayload, err := c.getPayloadRaw(ctx, pageURL)
 	if err != nil {
 		return nil, err
 	}
 
 	reader := strings.NewReader(string(rawPayload))
-	document, err := goquery.NewDocumentFromReader(reader)
+	data, err := c.scrapeTrendingMoviesData(reader)
 	if err != nil {
-		return nil, err
+		return nil, ErrContentRetrievalFailure
 	}
 
-	selection := document.Find("div.browse-movie-wrap")
-	if selection.Length() == 0 {
-		return nil, errors.New("no selections found for trending movies")
-	}
-
-	trendingMovies := make([]ScrapedMovie, 0)
-	selection.Each(func(i int, s *goquery.Selection) {
-		trendingMovie := c.parseScrapedMovie(s)
-		trendingMovies = append(trendingMovies, trendingMovie)
-	})
-
-	response := &TrendingMoviesResponse{
-		Data: TrendingMoviesData{trendingMovies},
-	}
-
-	return response, nil
+	return &TrendingMoviesResponse{*data}, nil
 }
 
-func (c Client) GetHomePageContent(ctx context.Context) (
+type HomePageContentData struct {
+	Popular  []SiteMovie
+	Latest   []SiteMovie
+	Upcoming []SiteUpcomingMovie
+}
+
+type HomePageContentResponse struct {
+	Data HomePageContentData `json:"data"`
+}
+
+func (c *Client) GetHomePageContent(ctx context.Context) (
 	*HomePageContentResponse, error,
 ) {
 	var rawPayload []byte
-	rawPayload, err := c.getPayloadRaw(ctx, c.siteURL)
+	rawPayload, err := c.getPayloadRaw(ctx, c.config.SiteURL)
 	if err != nil {
 		return nil, err
 	}
 
 	reader := strings.NewReader(string(rawPayload))
-	document, err := goquery.NewDocumentFromReader(reader)
+	data, err := c.scrapeHomePageContentData(reader)
 	if err != nil {
-		return nil, err
+		return nil, ErrContentRetrievalFailure
 	}
 
-	const (
-		popularCSS  = "div#popular-downloads div.browse-movie-wrap"
-		latestCSS   = "div.content-dark div.home-movies div.browse-movie-wrap"
-		upcomingCSS = "div.content-dark ~ div.home-content div.browse-movie-wrap"
-	)
-
-	var (
-		popDownloadSel   = document.Find(popularCSS)
-		latestTorrentSel = document.Find(latestCSS)
-		upcomingMovieSel = document.Find(upcomingCSS)
-	)
-
-	if popDownloadSel.Length() == 0 {
-		return nil, errors.New("no elements found for popular movies selection")
-	}
-
-	if latestTorrentSel.Length() == 0 {
-		return nil, errors.New("no elements found for latest torrents selection")
-	}
-
-	if upcomingMovieSel.Length() == 0 {
-		return nil, errors.New("no elements found for upcoming movies selection")
-	}
-
-	var (
-		popDownloads   = make([]ScrapedMovie, 0)
-		latestTorrents = make([]ScrapedMovie, 0)
-		upcomingMovies = make([]ScrapedUpcomingMovie, 0)
-	)
-
-	popDownloadSel.Each(func(i int, s *goquery.Selection) {
-		popDownload := c.parseScrapedMovie(s)
-		popDownloads = append(popDownloads, popDownload)
-	})
-
-	latestTorrentSel.Each(func(i int, s *goquery.Selection) {
-		latestTorrent := c.parseScrapedMovie(s)
-		latestTorrents = append(latestTorrents, latestTorrent)
-	})
-
-	upcomingMovieSel.Each(func(i int, s *goquery.Selection) {
-		progressSel := s.Find("div.browse-movie-year progress")
-		progress, _ := progressSel.Attr("value")
-		progressInt, _ := strconv.Atoi(progress)
-		upcomingMovies = append(
-			upcomingMovies,
-			ScrapedUpcomingMovie{
-				ScrapedMovie: c.parseScrapedMovie(s),
-				Progress:     progressInt,
-			},
-		)
-	})
-
-	response := &HomePageContentResponse{
-		Data: HomePageContentData{
-			popDownloads,
-			latestTorrents,
-			upcomingMovies,
-		},
-	}
-
-	return response, nil
+	return &HomePageContentResponse{*data}, nil
 }
 
-func (c Client) parseScrapedMovie(s *goquery.Selection) ScrapedMovie {
+func (c *Client) GetMagnetLink(t TorrentInfoGetter, q Quality) (string, error) {
 	var (
-		bottom   = s.Find("div.browse-movie-bottom")
-		anchor   = s.Find("a.browse-movie-link")
-		year     = bottom.Find("div.browse-movie-year").Text()
-		link, _  = anchor.Attr("href")
-		image, _ = anchor.Find("img").Attr("src")
+		foundTorrent = Torrent{}
+		torrentInfo  = t.GetTorrentInfo()
 	)
 
-	yearInt, _ := strconv.Atoi(year)
-	return ScrapedMovie{
-		Title:  bottom.Find("a.browse-movie-title").Text(),
-		Year:   yearInt,
-		Link:   link,
-		Image:  image,
-		Rating: anchor.Find("h4.rating").Text(),
+	for index := 0; index < len(torrentInfo.Torrents); index++ {
+		if torrentInfo.Torrents[index].Quality == q {
+			foundTorrent = torrentInfo.Torrents[index]
+		}
 	}
+
+	if foundTorrent.Quality == "" {
+		err := fmt.Errorf("no torrent found having quality %s", q)
+		return "", wrapErr(ErrQualityTorrentNotFound, err)
+	}
+
+	torrentName := fmt.Sprintf(
+		"%s+[%s]+[%s]",
+		torrentInfo.MovieTitle, q, strings.ToUpper(c.config.SiteDomain),
+	)
+
+	var trackers = url.Values{}
+	for _, tracker := range c.config.TorrentTrackers {
+		trackers.Add("tr", tracker)
+	}
+
+	magnet := fmt.Sprintf(
+		"magnet:?xt=urn:btih:%s&dn=%s&%s",
+		foundTorrent.Hash, url.QueryEscape(torrentName), trackers.Encode(),
+	)
+
+	return magnet, nil
 }
 
-func (c Client) getPayloadJSON(
+func (c *Client) getPayloadJSON(
 	ctx context.Context, targetURL string, payload interface{},
 ) error {
 	rawPayload, err := c.getPayloadRaw(ctx, targetURL)
@@ -245,7 +313,7 @@ func (c Client) getPayloadJSON(
 	return nil
 }
 
-func (c Client) getPayloadRaw(ctx context.Context, targetURL string) (
+func (c *Client) getPayloadRaw(ctx context.Context, targetURL string) (
 	[]byte, error,
 ) {
 	parsedURL, err := url.Parse(targetURL)
@@ -273,8 +341,8 @@ func (c Client) getPayloadRaw(ctx context.Context, targetURL string) (
 	return rawPayload, nil
 }
 
-func (c Client) getEndpointURL(path, query string) string {
-	targetURL := fmt.Sprintf("%s/%s", c.baseURL, path)
+func (c *Client) getEndpointURL(path, query string) string {
+	targetURL := fmt.Sprintf("%s/%s", c.config.APIBaseURL, path)
 	if query == "" {
 		return targetURL
 	}
