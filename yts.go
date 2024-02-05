@@ -2,10 +2,8 @@ package yts
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -132,8 +130,8 @@ func (c *Client) SearchMovies(ctx context.Context, filters *SearchMoviesFilters)
 	}
 
 	parsedPayload := &SearchMoviesResponse{}
-	targetURL := c.getEndpointURL("list_movies.json", queryString)
-	err = c.getPayloadJSON(ctx, targetURL, parsedPayload)
+	targetURL := c.getAPIEndpoint("list_movies.json", queryString)
+	err = c.newJSONRequestWithContext(ctx, targetURL, parsedPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -164,8 +162,8 @@ func (c *Client) GetMovieDetails(ctx context.Context, movieID int, filters *Movi
 	}
 
 	parsedPayload := &MovieDetailsResponse{}
-	targetURL := c.getEndpointURL("movie_details.json", queryString)
-	err := c.getPayloadJSON(ctx, targetURL, parsedPayload)
+	targetURL := c.getAPIEndpoint("movie_details.json", queryString)
+	err := c.newJSONRequestWithContext(ctx, targetURL, parsedPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -198,8 +196,8 @@ func (c *Client) GetMovieSuggestions(ctx context.Context, movieID int) (
 	)
 
 	parsedPayload := &MovieSuggestionsResponse{}
-	targetURL := c.getEndpointURL("movie_suggestions.json", queryString)
-	err := c.getPayloadJSON(ctx, targetURL, parsedPayload)
+	targetURL := c.getAPIEndpoint("movie_suggestions.json", queryString)
+	err := c.newJSONRequestWithContext(ctx, targetURL, parsedPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -293,57 +291,4 @@ func (c *Client) GetMagnetLink(t TorrentInfoGetter, q Quality) (string, error) {
 	)
 
 	return magnet, nil
-}
-
-func (c *Client) getPayloadJSON(
-	ctx context.Context, targetURL string, payload interface{},
-) error {
-	rawPayload, err := c.getPayloadRaw(ctx, targetURL)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(rawPayload, payload)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *Client) getPayloadRaw(ctx context.Context, targetURL string) (
-	[]byte, error,
-) {
-	parsedURL, err := url.Parse(targetURL)
-	if err != nil {
-		return nil, err
-	}
-
-	parsed := parsedURL.String()
-	request, err := http.NewRequestWithContext(ctx, "GET", parsed, http.NoBody)
-	if err != nil {
-		return nil, err
-	}
-
-	response, err := c.netClient.Do(request)
-	if err != nil {
-		return nil, err
-	}
-
-	defer response.Body.Close()
-	rawPayload, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return rawPayload, nil
-}
-
-func (c *Client) getEndpointURL(path, query string) string {
-	targetURL := fmt.Sprintf("%s/%s", c.config.APIBaseURL, path)
-	if query == "" {
-		return targetURL
-	}
-
-	return fmt.Sprintf("%s?%s", targetURL, query)
 }
