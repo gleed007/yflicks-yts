@@ -78,7 +78,10 @@ func DefaultClientConfig() ClientConfig {
 
 func NewClient() *Client {
 	config := DefaultClientConfig()
-	debug.setDebug(config.Debug)
+	if config.Debug {
+		debug.setDebug(true)
+	}
+
 	netClient := &http.Client{Timeout: config.RequestTimeout}
 	return &Client{config, netClient}
 }
@@ -92,7 +95,10 @@ func NewClientWithConfig(config *ClientConfig) *Client {
 		panic(ErrInvalidClientTimeout)
 	}
 
-	debug.setDebug(config.Debug)
+	if config.Debug {
+		debug.setDebug(true)
+	}
+
 	netClient := &http.Client{Timeout: config.RequestTimeout}
 	return &Client{*config, netClient}
 }
