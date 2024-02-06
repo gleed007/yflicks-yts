@@ -92,11 +92,6 @@ func NewClientWithConfig(config *ClientConfig) *Client {
 		panic(ErrInvalidClientTimeout)
 	}
 
-	config.TorrentTrackers = append(
-		config.TorrentTrackers,
-		DefaultTorrentTrackers()...,
-	)
-
 	debug.setDebug(config.Debug)
 	netClient := &http.Client{Timeout: config.RequestTimeout}
 	return &Client{*config, netClient}
