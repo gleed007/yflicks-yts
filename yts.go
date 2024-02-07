@@ -38,14 +38,9 @@ type Client struct {
 }
 
 var (
+	ErrInvalidClientConfig     = errors.New("invalid_client_config")
 	ErrContentRetrievalFailure = errors.New("content_retrieval_failure")
 	ErrFilterValidationFailure = errors.New("filter_validation_failure")
-)
-
-var ErrInvalidClientTimeout = fmt.Errorf(
-	`invalid_client_timeout: "yts client timeout must be between %s and %s inclusive"`,
-	TimeoutLimitLower,
-	TimeoutLimitUpper,
 )
 
 func wrapErr(sentinel error, others ...error) error {
@@ -78,11 +73,21 @@ func DefaultClientConfig() ClientConfig {
 
 func NewClientWithConfig(config *ClientConfig) *Client {
 	if config.RequestTimeout < TimeoutLimitLower {
-		panic(ErrInvalidClientTimeout)
+		err := fmt.Errorf(
+			"request timeout must be >= %s, you provided %q",
+			TimeoutLimitLower,
+			config.RequestTimeout,
+		)
+		panic(wrapErr(ErrInvalidClientConfig, err))
 	}
 
 	if TimeoutLimitUpper < config.RequestTimeout {
-		panic(ErrInvalidClientTimeout)
+		err := fmt.Errorf(
+			"request timeout must be <= %s, you provided %q",
+			TimeoutLimitUpper,
+			config.RequestTimeout,
+		)
+		panic(wrapErr(ErrInvalidClientConfig, err))
 	}
 
 	if config.Debug {
