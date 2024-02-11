@@ -1,14 +1,28 @@
 package yts_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"path"
 	"reflect"
 	"testing"
 	"time"
 
 	yts "github.com/atifcppprogrammer/yflicks-yts"
 )
+
+func getTestServer(t *testing.T, pattern, name string) *httptest.Server {
+	t.Helper()
+	serveMux := &http.ServeMux{}
+	serveMux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+		mockPath := path.Join("testdata", name)
+		http.ServeFile(w, r, mockPath)
+	})
+	return httptest.NewServer(serveMux)
+}
 
 func TestDefaultTorrentTrackers(t *testing.T) {
 	got := yts.DefaultTorrentTrackers()
@@ -100,5 +114,209 @@ func TestNewClient(t *testing.T) {
 	want := yts.NewClientWithConfig(&defaultConfig)
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("yts.NewClient() = %v, want %v", got, want)
+	}
+}
+
+func TestClient_SearchMovies(t *testing.T) {
+	const queryTerm = "Oppenheimer (2023)"
+
+	type fields struct {
+		config yts.ClientConfig
+	}
+	type args struct {
+		ctx     context.Context
+		filters *yts.SearchMoviesFilters
+	}
+	type handler struct {
+		pattern  string
+		testdata string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		handler handler
+		want    *yts.SearchMoviesResponse
+		wantErr error
+	}{
+		{
+			name:    "returns error for invalid search filters",
+			fields:  fields{yts.DefaultClientConfig()},
+			args:    args{context.Background(), &yts.SearchMoviesFilters{}},
+			want:    nil,
+			wantErr: yts.ErrFilterValidationFailure,
+		},
+		{
+			name:    "returns search movies response for valid filters",
+			fields:  fields{yts.DefaultClientConfig()},
+			args:    args{context.Background(), yts.DefaultSearchMoviesFilter(queryTerm)},
+			handler: handler{"/list_movies.json", "list_movies.json"},
+			want: &yts.SearchMoviesResponse{
+				Data: yts.SearchMoviesData{
+					MovieCount: 3,
+					PageNumber: 1,
+					Limit:      20,
+					Movies: []yts.Movie{
+						{MoviePartial: yts.MoviePartial{ID: 57427}},
+						{MoviePartial: yts.MoviePartial{ID: 57795}},
+						{MoviePartial: yts.MoviePartial{ID: 53181}},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.handler.pattern != "" {
+				server := getTestServer(t, tt.handler.pattern, tt.handler.testdata)
+				tt.fields.config.APIBaseURL = server.URL
+				defer server.Close()
+			}
+
+			cfg := tt.fields.config
+			c := yts.NewClientWithConfig(&cfg)
+			got, err := c.SearchMovies(tt.args.ctx, tt.args.filters)
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("yts.Client.SearchMovies() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("yts.Client.SearchMovies() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_GetMovieDetails(t *testing.T) {
+	const movieID = 57427
+
+	type fields struct {
+		config yts.ClientConfig
+	}
+	type args struct {
+		ctx     context.Context
+		movieID int
+		filters *yts.MovieDetailsFilters
+	}
+	type handler struct {
+		pattern  string
+		testdata string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		handler handler
+		want    *yts.MovieDetailsResponse
+		wantErr error
+	}{
+		{
+			name:    "returns error for invalid movieID",
+			fields:  fields{yts.DefaultClientConfig()},
+			args:    args{context.Background(), 0, &yts.MovieDetailsFilters{}},
+			want:    nil,
+			wantErr: yts.ErrFilterValidationFailure,
+		},
+		{
+			name:    "returns movie details response for valid movieID",
+			fields:  fields{yts.DefaultClientConfig()},
+			args:    args{context.Background(), movieID, yts.DefaultMovieDetailsFilters()},
+			handler: handler{"/movie_details.json", "movie_details.json"},
+			want: &yts.MovieDetailsResponse{
+				Data: yts.MovieDetailsData{
+					Movie: yts.MovieDetails{
+						MoviePartial: yts.MoviePartial{ID: movieID},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.handler.pattern != "" {
+				server := getTestServer(t, tt.handler.pattern, tt.handler.testdata)
+				tt.fields.config.APIBaseURL = server.URL
+				defer server.Close()
+			}
+
+			cfg := tt.fields.config
+			c := yts.NewClientWithConfig(&cfg)
+			got, err := c.GetMovieDetails(tt.args.ctx, tt.args.movieID, tt.args.filters)
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("yts.Client.GetMovieDetails() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("yts.Client.GetMovieDetails() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_GetMovieSuggestions(t *testing.T) {
+	const movieID = 57427
+
+	type fields struct {
+		config yts.ClientConfig
+	}
+	type args struct {
+		ctx     context.Context
+		movieID int
+	}
+	type handler struct {
+		pattern  string
+		testdata string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		handler handler
+		want    *yts.MovieSuggestionsResponse
+		wantErr error
+	}{
+		{
+			name:    "returns error for invalid movieID",
+			fields:  fields{yts.DefaultClientConfig()},
+			args:    args{context.Background(), 0},
+			want:    nil,
+			wantErr: yts.ErrFilterValidationFailure,
+		},
+		{
+			name:    "returns movie suggestions response for valid movieID",
+			fields:  fields{yts.DefaultClientConfig()},
+			args:    args{context.Background(), movieID},
+			handler: handler{"/movie_suggestions.json", "movie_suggestions.json"},
+			want: &yts.MovieSuggestionsResponse{
+				Data: yts.MovieSuggestionsData{
+					MovieCount: 0,
+					Movies: []yts.Movie{
+						{MoviePartial: yts.MoviePartial{ID: 2719}},
+						{MoviePartial: yts.MoviePartial{ID: 53072}},
+						{MoviePartial: yts.MoviePartial{ID: 55197}},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.handler.pattern != "" {
+				server := getTestServer(t, tt.handler.pattern, tt.handler.testdata)
+				tt.fields.config.APIBaseURL = server.URL
+				defer server.Close()
+			}
+
+			cfg := tt.fields.config
+			c := yts.NewClientWithConfig(&cfg)
+			got, err := c.GetMovieSuggestions(tt.args.ctx, tt.args.movieID)
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("yts.Client.GetMovieSuggestions() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("yts.Client.GetMovieSuggestions() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
