@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -318,5 +320,54 @@ func TestClient_GetMovieSuggestions(t *testing.T) {
 				t.Errorf("yts.Client.GetMovieSuggestions() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestClient_GetMagnetLinks(t *testing.T) {
+	var (
+		config   = yts.DefaultClientConfig()
+		client   = yts.NewClientWithConfig(&config)
+		trackers = url.Values{}
+	)
+
+	for _, tracker := range config.TorrentTrackers {
+		trackers.Add("tr", tracker)
+	}
+
+	infoGetter := yts.MoviePartial{
+		TitleLong: "Oppenheimer (2023)",
+		Torrents: []yts.Torrent{
+			{Hash: "Hash0", Quality: yts.Quality720p},
+			{Hash: "Hash1", Quality: yts.Quality1080p},
+			{Hash: "Hash2", Quality: yts.Quality1080p},
+			{Hash: "Hash3", Quality: yts.Quality2160p},
+		},
+	}
+
+	getMagnetFor := func(torrent yts.Torrent) string {
+		torrentName := fmt.Sprintf(
+			"%s+[%s]+[%s]",
+			infoGetter.GetTorrentInfo().MovieTitle,
+			torrent.Quality,
+			strings.ToUpper(config.SiteDomain),
+		)
+
+		return fmt.Sprintf(
+			"magnet:?xt=urn:btih:%s&dn=%s&%s",
+			torrent.Hash,
+			url.QueryEscape(torrentName),
+			trackers.Encode(),
+		)
+	}
+
+	want := make(yts.TorrentMagnets, 0)
+	torrents := infoGetter.GetTorrentInfo().Torrents
+	for i := 0; i < len(torrents); i++ {
+		want[torrents[i].Quality] = getMagnetFor(torrents[i])
+	}
+
+	got := client.GetMagnetLinks(&infoGetter)
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("yts.Client.GetMagnetLinks() = %v, want %v", got, want)
 	}
 }
