@@ -323,6 +323,151 @@ func TestClient_GetMovieSuggestions(t *testing.T) {
 	}
 }
 
+func TestClient_GetTrendingMovies(t *testing.T) {
+	type fields struct {
+		config yts.ClientConfig
+	}
+	type args struct {
+		ctx context.Context
+	}
+	type handler struct {
+		pattern  string
+		testdata string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		handler handler
+		want    *yts.TrendingMoviesResponse
+		wantErr error
+	}{
+		{
+			name:    "returns trending movies response in absence of scraping errors",
+			fields:  fields{yts.DefaultClientConfig()},
+			args:    args{context.Background()},
+			handler: handler{"/", "trending_movies.html"},
+			want: &yts.TrendingMoviesResponse{
+				Data: yts.TrendingMoviesData{
+					Movies: []yts.SiteMovie{{
+						Rating: "7.6 / 10",
+						SiteMovieBase: yts.SiteMovieBase{
+							Title:  "Superbad",
+							Year:   2007,
+							Link:   "https://yts.mx/movies/superbad-2007",
+							Image:  "/assets/images/movies/Superbad_2007/medium-cover.jpg",
+							Genres: []yts.Genre{"Action", "Comedy"},
+						},
+					}},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.handler.pattern != "" {
+				server := getTestServer(t, tt.handler.pattern, tt.handler.testdata)
+				tt.fields.config.SiteURL = server.URL
+				defer server.Close()
+			}
+
+			cfg := tt.fields.config
+			c := yts.NewClientWithConfig(&cfg)
+			got, err := c.GetTrendingMovies(tt.args.ctx)
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("yts.Client.GetTrendingMovies() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("yts.Client.GetTrendingMovies() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_GetHomePageContent(t *testing.T) {
+	type fields struct {
+		config yts.ClientConfig
+	}
+	type args struct {
+		ctx context.Context
+	}
+	type handler struct {
+		pattern  string
+		testdata string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		handler handler
+		want    *yts.HomePageContentResponse
+		wantErr error
+	}{
+		{
+			name:    "returns home page content response in absence of scraping errors",
+			fields:  fields{yts.DefaultClientConfig()},
+			args:    args{context.Background()},
+			handler: handler{"/", "index.html"},
+			want: &yts.HomePageContentResponse{
+				Data: yts.HomePageContentData{
+					Popular: []yts.SiteMovie{{
+						Rating: "6.8 / 10",
+						SiteMovieBase: yts.SiteMovieBase{
+							Title:  "Migration",
+							Year:   2023,
+							Link:   "https://yts.mx/movies/migration-2023",
+							Image:  "/assets/images/movies/migration_2023/medium-cover.jpg",
+							Genres: []yts.Genre{"Action", "Adventure"},
+						},
+					}},
+					Latest: []yts.SiteMovie{{
+						Rating: "5.3 / 10",
+						SiteMovieBase: yts.SiteMovieBase{
+							Title:  "[NL] Het einde van de reis",
+							Year:   1981,
+							Link:   "https://yts.mx/movies/het-einde-van-de-reis-1981",
+							Image:  "/assets/images/movies/het_einde_van_de_reis_1981/medium-cover.jpg",
+							Genres: []yts.Genre{"Action"},
+						},
+					}},
+					Upcoming: []yts.SiteUpcomingMovie{{
+						Progress: 28,
+						Quality:  yts.Quality2160p,
+						SiteMovieBase: yts.SiteMovieBase{
+							Title:  "Boyz n the Hood",
+							Year:   1991,
+							Link:   "https://www.imdb.com/title/tt0101507/",
+							Image:  "/assets/images/movies/Boyz_n_the_Hood_1991/medium-cover.jpg",
+							Genres: []yts.Genre{},
+						},
+					}},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.handler.pattern != "" {
+				server := getTestServer(t, tt.handler.pattern, tt.handler.testdata)
+				tt.fields.config.SiteURL = server.URL
+				defer server.Close()
+			}
+
+			cfg := tt.fields.config
+			c := yts.NewClientWithConfig(&cfg)
+			got, err := c.GetHomePageContent(tt.args.ctx)
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("Client.GetHomePageContent() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Client.GetHomePageContent() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestClient_GetMagnetLinks(t *testing.T) {
 	var (
 		config   = yts.DefaultClientConfig()
