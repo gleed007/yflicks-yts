@@ -16,14 +16,18 @@ import (
 	yts "github.com/atifcppprogrammer/yflicks-yts"
 )
 
-func getTestServer(t *testing.T, pattern, name string) *httptest.Server {
+func assertEqual(t *testing.T, method string, got, want any) {
 	t.Helper()
-	serveMux := &http.ServeMux{}
-	serveMux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
-		mockPath := path.Join("testdata", name)
-		http.ServeFile(w, r, mockPath)
-	})
-	return httptest.NewServer(serveMux)
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("%s() = %v, want %v", method, got, want)
+	}
+}
+
+func assertError(t *testing.T, method string, gotErr, wantErr error) {
+	t.Helper()
+	if !errors.Is(gotErr, wantErr) {
+		t.Errorf("%s() error = %v, wantErr %v", method, gotErr, wantErr)
+	}
 }
 
 func TestDefaultTorrentTrackers(t *testing.T) {
@@ -39,9 +43,7 @@ func TestDefaultTorrentTrackers(t *testing.T) {
 		"udp://tracker.leechers-paradise.org:6969",
 	}
 
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("yts.DefaultTorrentTrackers() = %v, want %v", got, want)
-	}
+	assertEqual(t, "DefaultTorrentTrackers", got, want)
 }
 
 func TestDefaultClientConfig(t *testing.T) {
@@ -55,37 +57,33 @@ func TestDefaultClientConfig(t *testing.T) {
 		Debug:           false,
 	}
 
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("yts.DefaultClientConfig() = %v, want %v", got, want)
-	}
+	assertEqual(t, "DefaultClientConfig", got, want)
 }
 
 func TestNewClientWithConfig(t *testing.T) {
-	type args struct {
-		config *yts.ClientConfig
-	}
+	const methodName = "NewClientWithConfig"
+
 	tests := []struct {
 		name      string
-		args      args
+		clientCfg *yts.ClientConfig
 		wantErr   error
 		wantPanic bool
 	}{
 		{
 			name:      fmt.Sprintf(`panic() if config request timeout < %d`, yts.TimeoutLimitLower),
-			args:      args{&yts.ClientConfig{RequestTimeout: time.Second}},
+			clientCfg: &yts.ClientConfig{RequestTimeout: time.Second},
 			wantErr:   yts.ErrInvalidClientConfig,
 			wantPanic: true,
 		},
 		{
 			name:      fmt.Sprintf(`panic() if config request timeout > %d`, yts.TimeoutLimitUpper),
-			args:      args{&yts.ClientConfig{RequestTimeout: time.Hour}},
+			clientCfg: &yts.ClientConfig{RequestTimeout: time.Hour},
 			wantErr:   yts.ErrInvalidClientConfig,
 			wantPanic: true,
 		},
 		{
 			name:      "no panic() if valid client config provided",
-			args:      args{&yts.ClientConfig{RequestTimeout: time.Minute}},
-			wantErr:   nil,
+			clientCfg: &yts.ClientConfig{RequestTimeout: time.Minute},
 			wantPanic: false,
 		},
 	}
@@ -97,373 +95,345 @@ func TestNewClientWithConfig(t *testing.T) {
 					return
 				}
 				if !tt.wantPanic && recovered != nil {
-					t.Errorf("yts.NewClientWithConfig() unexpected panic with value %v", recovered)
+					t.Errorf("%s() unexpected panic with value %v", methodName, recovered)
 					return
 				}
 				if err, _ := recovered.(error); !errors.Is(err, tt.wantErr) {
-					t.Errorf("yts.NewClientWithConfig() unexpected panic with error = %v, wantErr %v", err, tt.wantErr)
+					t.Errorf("%s() unexpected panic with error = %v, wantErr %v", methodName, err, tt.wantErr)
 					return
 				}
 			}()
-			yts.NewClientWithConfig(tt.args.config)
+			yts.NewClientWithConfig(tt.clientCfg)
 		})
 	}
 }
 
 func TestNewClient(t *testing.T) {
-	got := yts.NewClient()
 	defaultConfig := yts.DefaultClientConfig()
+	got := yts.NewClient()
 	want := yts.NewClientWithConfig(&defaultConfig)
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("yts.NewClient() = %v, want %v", got, want)
+	assertEqual(t, "NewClient", got, want)
+}
+
+type testHTTPHandlerConfig struct {
+	filename string
+	pattern  string
+}
+
+func createTestServer(t *testing.T, config testHTTPHandlerConfig) *httptest.Server {
+	t.Helper()
+	if config.pattern == "" {
+		config.pattern = fmt.Sprintf("/%s", config.filename)
 	}
+
+	serveMux := &http.ServeMux{}
+	serveMux.HandleFunc(config.pattern, func(w http.ResponseWriter, r *http.Request) {
+		mockPath := path.Join("testdata", config.filename)
+		http.ServeFile(w, r, mockPath)
+	})
+	return httptest.NewServer(serveMux)
 }
 
 func TestClient_SearchMovies(t *testing.T) {
-	const queryTerm = "Oppenheimer (2023)"
+	const (
+		queryTerm  = "Oppenheimer (2023)"
+		methodName = "Client.SearchMovies"
+	)
 
-	type fields struct {
-		config yts.ClientConfig
-	}
-	type args struct {
-		ctx     context.Context
-		filters *yts.SearchMoviesFilters
-	}
-	type handler struct {
-		pattern  string
-		testdata string
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		handler handler
-		want    *yts.SearchMoviesResponse
-		wantErr error
-	}{
-		{
-			name:    "returns error for invalid search filters",
-			fields:  fields{yts.DefaultClientConfig()},
-			args:    args{context.Background(), &yts.SearchMoviesFilters{}},
-			want:    nil,
-			wantErr: yts.ErrFilterValidationFailure,
-		},
-		{
-			name:    "returns search movies response for valid filters",
-			fields:  fields{yts.DefaultClientConfig()},
-			args:    args{context.Background(), yts.DefaultSearchMoviesFilter(queryTerm)},
-			handler: handler{"/list_movies.json", "list_movies.json"},
-			want: &yts.SearchMoviesResponse{
-				Data: yts.SearchMoviesData{
-					MovieCount: 3,
-					PageNumber: 1,
-					Limit:      20,
-					Movies: []yts.Movie{
-						{MoviePartial: yts.MoviePartial{ID: 57427}},
-						{MoviePartial: yts.MoviePartial{ID: 57795}},
-						{MoviePartial: yts.MoviePartial{ID: 53181}},
-					},
-				},
+	mockedValidResponse := &yts.SearchMoviesResponse{
+		Data: yts.SearchMoviesData{
+			MovieCount: 3,
+			PageNumber: 1,
+			Limit:      20,
+			Movies: []yts.Movie{
+				{MoviePartial: yts.MoviePartial{ID: 57427}},
+				{MoviePartial: yts.MoviePartial{ID: 57795}},
+				{MoviePartial: yts.MoviePartial{ID: 53181}},
 			},
 		},
 	}
+
+	tests := []struct {
+		name       string
+		handlerCfg testHTTPHandlerConfig
+		clientCfg  yts.ClientConfig
+		ctx        context.Context
+		filters    *yts.SearchMoviesFilters
+		want       *yts.SearchMoviesResponse
+		wantErr    error
+	}{
+		{
+			name:      `returns error for "0" value search filters`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:       "returns mocked valid response for default filters",
+			handlerCfg: testHTTPHandlerConfig{filename: "list_movies.json"},
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			filters:    yts.DefaultSearchMoviesFilter(queryTerm),
+			want:       mockedValidResponse,
+		},
+	}
+
 	for _, tt := range tests {
+		clientCfg := tt.clientCfg
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.handler.pattern != "" {
-				server := getTestServer(t, tt.handler.pattern, tt.handler.testdata)
-				tt.fields.config.APIBaseURL = server.URL
+			if tt.handlerCfg.filename != "" {
+				server := createTestServer(t, tt.handlerCfg)
+				clientCfg.APIBaseURL = server.URL
 				defer server.Close()
 			}
 
-			cfg := tt.fields.config
-			c := yts.NewClientWithConfig(&cfg)
-			got, err := c.SearchMovies(tt.args.ctx, tt.args.filters)
-			if !errors.Is(err, tt.wantErr) {
-				t.Errorf("yts.Client.SearchMovies() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("yts.Client.SearchMovies() = %v, want %v", got, tt.want)
-			}
+			c := yts.NewClientWithConfig(&clientCfg)
+			got, err := c.SearchMovies(tt.ctx, tt.filters)
+			assertError(t, methodName, err, tt.wantErr)
+			assertEqual(t, methodName, got, tt.want)
 		})
 	}
 }
 
 func TestClient_GetMovieDetails(t *testing.T) {
-	const movieID = 57427
+	const (
+		movieID    = 57427
+		methodName = "Client.GetMovieDetails"
+	)
 
-	type fields struct {
-		config yts.ClientConfig
-	}
-	type args struct {
-		ctx     context.Context
-		movieID int
-		filters *yts.MovieDetailsFilters
-	}
-	type handler struct {
-		pattern  string
-		testdata string
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		handler handler
-		want    *yts.MovieDetailsResponse
-		wantErr error
-	}{
-		{
-			name:    "returns error for invalid movieID",
-			fields:  fields{yts.DefaultClientConfig()},
-			args:    args{context.Background(), 0, &yts.MovieDetailsFilters{}},
-			want:    nil,
-			wantErr: yts.ErrFilterValidationFailure,
-		},
-		{
-			name:    "returns movie details response for valid movieID",
-			fields:  fields{yts.DefaultClientConfig()},
-			args:    args{context.Background(), movieID, yts.DefaultMovieDetailsFilters()},
-			handler: handler{"/movie_details.json", "movie_details.json"},
-			want: &yts.MovieDetailsResponse{
-				Data: yts.MovieDetailsData{
-					Movie: yts.MovieDetails{
-						MoviePartial: yts.MoviePartial{ID: movieID},
-					},
-				},
+	mockedValidResponse := &yts.MovieDetailsResponse{
+		Data: yts.MovieDetailsData{
+			Movie: yts.MovieDetails{
+				MoviePartial: yts.MoviePartial{ID: movieID},
 			},
 		},
 	}
+
+	tests := []struct {
+		name       string
+		handlerCfg testHTTPHandlerConfig
+		clientCfg  yts.ClientConfig
+		ctx        context.Context
+		movieID    int
+		filters    *yts.MovieDetailsFilters
+		want       *yts.MovieDetailsResponse
+		wantErr    error
+	}{
+		{
+			name:       "returns error for invalid movieID",
+			movieID:    0,
+			handlerCfg: testHTTPHandlerConfig{filename: "movie_details.json"},
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			filters:    &yts.MovieDetailsFilters{},
+			wantErr:    yts.ErrFilterValidationFailure,
+		},
+		{
+			name:       "returns mocked valid response for valid movieID",
+			movieID:    movieID,
+			clientCfg:  yts.DefaultClientConfig(),
+			handlerCfg: testHTTPHandlerConfig{filename: "movie_details.json"},
+			ctx:        context.Background(),
+			filters:    yts.DefaultMovieDetailsFilters(),
+			want:       mockedValidResponse,
+		},
+	}
 	for _, tt := range tests {
+		clientCfg := tt.clientCfg
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.handler.pattern != "" {
-				server := getTestServer(t, tt.handler.pattern, tt.handler.testdata)
-				tt.fields.config.APIBaseURL = server.URL
+			if tt.handlerCfg.filename != "" {
+				server := createTestServer(t, tt.handlerCfg)
+				clientCfg.APIBaseURL = server.URL
 				defer server.Close()
 			}
 
-			cfg := tt.fields.config
-			c := yts.NewClientWithConfig(&cfg)
-			got, err := c.GetMovieDetails(tt.args.ctx, tt.args.movieID, tt.args.filters)
-			if !errors.Is(err, tt.wantErr) {
-				t.Errorf("yts.Client.GetMovieDetails() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("yts.Client.GetMovieDetails() = %v, want %v", got, tt.want)
-			}
+			c := yts.NewClientWithConfig(&clientCfg)
+			got, err := c.GetMovieDetails(tt.ctx, tt.movieID, tt.filters)
+			assertError(t, methodName, err, tt.wantErr)
+			assertEqual(t, methodName, got, tt.want)
 		})
 	}
 }
 
 func TestClient_GetMovieSuggestions(t *testing.T) {
-	const movieID = 57427
+	const (
+		movieID    = 57427
+		methodName = "Client.GetMovieSuggestions"
+	)
 
-	type fields struct {
-		config yts.ClientConfig
-	}
-	type args struct {
-		ctx     context.Context
-		movieID int
-	}
-	type handler struct {
-		pattern  string
-		testdata string
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		handler handler
-		want    *yts.MovieSuggestionsResponse
-		wantErr error
-	}{
-		{
-			name:    "returns error for invalid movieID",
-			fields:  fields{yts.DefaultClientConfig()},
-			args:    args{context.Background(), 0},
-			want:    nil,
-			wantErr: yts.ErrFilterValidationFailure,
-		},
-		{
-			name:    "returns movie suggestions response for valid movieID",
-			fields:  fields{yts.DefaultClientConfig()},
-			args:    args{context.Background(), movieID},
-			handler: handler{"/movie_suggestions.json", "movie_suggestions.json"},
-			want: &yts.MovieSuggestionsResponse{
-				Data: yts.MovieSuggestionsData{
-					MovieCount: 0,
-					Movies: []yts.Movie{
-						{MoviePartial: yts.MoviePartial{ID: 2719}},
-						{MoviePartial: yts.MoviePartial{ID: 53072}},
-						{MoviePartial: yts.MoviePartial{ID: 55197}},
-					},
-				},
+	mockedValidResponse := &yts.MovieSuggestionsResponse{
+		Data: yts.MovieSuggestionsData{
+			MovieCount: 0,
+			Movies: []yts.Movie{
+				{MoviePartial: yts.MoviePartial{ID: 2719}},
+				{MoviePartial: yts.MoviePartial{ID: 53072}},
+				{MoviePartial: yts.MoviePartial{ID: 55197}},
 			},
 		},
 	}
+
+	tests := []struct {
+		name       string
+		handlerCfg testHTTPHandlerConfig
+		clientCfg  yts.ClientConfig
+		ctx        context.Context
+		movieID    int
+		want       *yts.MovieSuggestionsResponse
+		wantErr    error
+	}{
+		{
+			name:      "returns error for invalid movieID",
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			movieID:   0,
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:       "returns mocked valid response for valid movieID",
+			clientCfg:  yts.DefaultClientConfig(),
+			handlerCfg: testHTTPHandlerConfig{filename: "movie_suggestions.json"},
+			ctx:        context.Background(),
+			movieID:    movieID,
+			want:       mockedValidResponse,
+		},
+	}
 	for _, tt := range tests {
+		clientCfg := tt.clientCfg
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.handler.pattern != "" {
-				server := getTestServer(t, tt.handler.pattern, tt.handler.testdata)
-				tt.fields.config.APIBaseURL = server.URL
+			if tt.handlerCfg.filename != "" {
+				server := createTestServer(t, tt.handlerCfg)
+				clientCfg.APIBaseURL = server.URL
 				defer server.Close()
 			}
 
-			cfg := tt.fields.config
-			c := yts.NewClientWithConfig(&cfg)
-			got, err := c.GetMovieSuggestions(tt.args.ctx, tt.args.movieID)
-			if !errors.Is(err, tt.wantErr) {
-				t.Errorf("yts.Client.GetMovieSuggestions() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("yts.Client.GetMovieSuggestions() = %v, want %v", got, tt.want)
-			}
+			c := yts.NewClientWithConfig(&clientCfg)
+			got, err := c.GetMovieSuggestions(tt.ctx, tt.movieID)
+			assertError(t, methodName, err, tt.wantErr)
+			assertEqual(t, methodName, got, tt.want)
 		})
 	}
 }
 
 func TestClient_GetTrendingMovies(t *testing.T) {
-	type fields struct {
-		config yts.ClientConfig
+	const methodName = "Client.GetTrendingMovies"
+
+	mockedValidResponse := &yts.TrendingMoviesResponse{
+		Data: yts.TrendingMoviesData{
+			Movies: []yts.SiteMovie{{
+				Rating: "7.6 / 10",
+				SiteMovieBase: yts.SiteMovieBase{
+					Title:  "Superbad",
+					Year:   2007,
+					Link:   "https://yts.mx/movies/superbad-2007",
+					Image:  "/assets/images/movies/Superbad_2007/medium-cover.jpg",
+					Genres: []yts.Genre{"Action", "Comedy"},
+				},
+			}},
+		},
 	}
-	type args struct {
-		ctx context.Context
-	}
-	type handler struct {
-		pattern  string
-		testdata string
-	}
+
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		handler handler
-		want    *yts.TrendingMoviesResponse
-		wantErr error
+		name       string
+		handlerCfg testHTTPHandlerConfig
+		clientCfg  yts.ClientConfig
+		ctx        context.Context
+		want       *yts.TrendingMoviesResponse
+		wantErr    error
 	}{
 		{
-			name:    "returns trending movies response in absence of scraping errors",
-			fields:  fields{yts.DefaultClientConfig()},
-			args:    args{context.Background()},
-			handler: handler{"/", "trending_movies.html"},
-			want: &yts.TrendingMoviesResponse{
-				Data: yts.TrendingMoviesData{
-					Movies: []yts.SiteMovie{{
-						Rating: "7.6 / 10",
-						SiteMovieBase: yts.SiteMovieBase{
-							Title:  "Superbad",
-							Year:   2007,
-							Link:   "https://yts.mx/movies/superbad-2007",
-							Image:  "/assets/images/movies/Superbad_2007/medium-cover.jpg",
-							Genres: []yts.Genre{"Action", "Comedy"},
-						},
-					}},
-				},
-			},
+			name:       "returns mocked valid response when scraping succeeds",
+			handlerCfg: testHTTPHandlerConfig{"trending_movies.html", "/"},
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			want:       mockedValidResponse,
 		},
 	}
 	for _, tt := range tests {
+		clientCfg := tt.clientCfg
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.handler.pattern != "" {
-				server := getTestServer(t, tt.handler.pattern, tt.handler.testdata)
-				tt.fields.config.SiteURL = server.URL
+			if tt.handlerCfg.pattern != "" {
+				server := createTestServer(t, tt.handlerCfg)
+				clientCfg.SiteURL = server.URL
 				defer server.Close()
 			}
 
-			cfg := tt.fields.config
-			c := yts.NewClientWithConfig(&cfg)
-			got, err := c.GetTrendingMovies(tt.args.ctx)
-			if !errors.Is(err, tt.wantErr) {
-				t.Errorf("yts.Client.GetTrendingMovies() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("yts.Client.GetTrendingMovies() = %v, want %v", got, tt.want)
-			}
+			c := yts.NewClientWithConfig(&clientCfg)
+			got, err := c.GetTrendingMovies(tt.ctx)
+			assertError(t, methodName, err, tt.wantErr)
+			assertEqual(t, methodName, got, tt.want)
 		})
 	}
 }
 
 func TestClient_GetHomePageContent(t *testing.T) {
-	type fields struct {
-		config yts.ClientConfig
+	const methodName = "Client.GetHomePageContent"
+
+	mockedValidResponse := &yts.HomePageContentResponse{
+		Data: yts.HomePageContentData{
+			Popular: []yts.SiteMovie{{
+				Rating: "6.8 / 10",
+				SiteMovieBase: yts.SiteMovieBase{
+					Title:  "Migration",
+					Year:   2023,
+					Link:   "https://yts.mx/movies/migration-2023",
+					Image:  "/assets/images/movies/migration_2023/medium-cover.jpg",
+					Genres: []yts.Genre{"Action", "Adventure"},
+				},
+			}},
+			Latest: []yts.SiteMovie{{
+				Rating: "5.3 / 10",
+				SiteMovieBase: yts.SiteMovieBase{
+					Title:  "[NL] Het einde van de reis",
+					Year:   1981,
+					Link:   "https://yts.mx/movies/het-einde-van-de-reis-1981",
+					Image:  "/assets/images/movies/het_einde_van_de_reis_1981/medium-cover.jpg",
+					Genres: []yts.Genre{"Action"},
+				},
+			}},
+			Upcoming: []yts.SiteUpcomingMovie{{
+				Progress: 28,
+				Quality:  yts.Quality2160p,
+				SiteMovieBase: yts.SiteMovieBase{
+					Title:  "Boyz n the Hood",
+					Year:   1991,
+					Link:   "https://www.imdb.com/title/tt0101507/",
+					Image:  "/assets/images/movies/Boyz_n_the_Hood_1991/medium-cover.jpg",
+					Genres: []yts.Genre{},
+				},
+			}},
+		},
 	}
-	type args struct {
-		ctx context.Context
-	}
-	type handler struct {
-		pattern  string
-		testdata string
-	}
+
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		handler handler
-		want    *yts.HomePageContentResponse
-		wantErr error
+		name       string
+		handlerCfg testHTTPHandlerConfig
+		clientCfg  yts.ClientConfig
+		ctx        context.Context
+		want       *yts.HomePageContentResponse
+		wantErr    error
 	}{
 		{
-			name:    "returns home page content response in absence of scraping errors",
-			fields:  fields{yts.DefaultClientConfig()},
-			args:    args{context.Background()},
-			handler: handler{"/", "index.html"},
-			want: &yts.HomePageContentResponse{
-				Data: yts.HomePageContentData{
-					Popular: []yts.SiteMovie{{
-						Rating: "6.8 / 10",
-						SiteMovieBase: yts.SiteMovieBase{
-							Title:  "Migration",
-							Year:   2023,
-							Link:   "https://yts.mx/movies/migration-2023",
-							Image:  "/assets/images/movies/migration_2023/medium-cover.jpg",
-							Genres: []yts.Genre{"Action", "Adventure"},
-						},
-					}},
-					Latest: []yts.SiteMovie{{
-						Rating: "5.3 / 10",
-						SiteMovieBase: yts.SiteMovieBase{
-							Title:  "[NL] Het einde van de reis",
-							Year:   1981,
-							Link:   "https://yts.mx/movies/het-einde-van-de-reis-1981",
-							Image:  "/assets/images/movies/het_einde_van_de_reis_1981/medium-cover.jpg",
-							Genres: []yts.Genre{"Action"},
-						},
-					}},
-					Upcoming: []yts.SiteUpcomingMovie{{
-						Progress: 28,
-						Quality:  yts.Quality2160p,
-						SiteMovieBase: yts.SiteMovieBase{
-							Title:  "Boyz n the Hood",
-							Year:   1991,
-							Link:   "https://www.imdb.com/title/tt0101507/",
-							Image:  "/assets/images/movies/Boyz_n_the_Hood_1991/medium-cover.jpg",
-							Genres: []yts.Genre{},
-						},
-					}},
-				},
-			},
+			name:       "returns mocked valid response when scraping succeeds",
+			handlerCfg: testHTTPHandlerConfig{"index.html", "/"},
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			want:       mockedValidResponse,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.handler.pattern != "" {
-				server := getTestServer(t, tt.handler.pattern, tt.handler.testdata)
-				tt.fields.config.SiteURL = server.URL
+			clientCfg := tt.clientCfg
+			if tt.handlerCfg.filename != "" {
+				server := createTestServer(t, tt.handlerCfg)
+				clientCfg.SiteURL = server.URL
 				defer server.Close()
 			}
 
-			cfg := tt.fields.config
-			c := yts.NewClientWithConfig(&cfg)
-			got, err := c.GetHomePageContent(tt.args.ctx)
-			if !errors.Is(err, tt.wantErr) {
-				t.Errorf("Client.GetHomePageContent() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Client.GetHomePageContent() = %v, want %v", got, tt.want)
-			}
+			c := yts.NewClientWithConfig(&clientCfg)
+			got, err := c.GetHomePageContent(tt.ctx)
+			assertError(t, methodName, err, tt.wantErr)
+			assertEqual(t, methodName, got, tt.want)
 		})
 	}
 }
@@ -512,7 +482,5 @@ func TestClient_GetMagnetLinks(t *testing.T) {
 	}
 
 	got := client.GetMagnetLinks(&infoGetter)
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("yts.Client.GetMagnetLinks() = %v, want %v", got, want)
-	}
+	assertEqual(t, "Client.GetMagnetLinks", got, want)
 }

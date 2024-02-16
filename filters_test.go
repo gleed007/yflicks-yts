@@ -1,7 +1,6 @@
 package yts_test
 
 import (
-	"reflect"
 	"testing"
 
 	yts "github.com/atifcppprogrammer/yflicks-yts"
@@ -22,9 +21,7 @@ func TestDefaultSearchMoviesFilter(t *testing.T) {
 		WithRTRatings: false,
 	}
 
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("yts.DefaultSearchMoviesFilter() = %v, want %v", got, want)
-	}
+	assertEqual(t, "DefaultSearchMoviesFilter", got, want)
 }
 
 func TestDefaultMovieDetailsFilters(t *testing.T) {
@@ -34,7 +31,5 @@ func TestDefaultMovieDetailsFilters(t *testing.T) {
 		WithCast:   true,
 	}
 
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("yts.DefaultMovieDetailsFilters() = %v, want %v", got, want)
-	}
+	assertEqual(t, "DefaultMovieDetalsFilters", got, want)
 }
