@@ -18,6 +18,7 @@ linters-settings:
           - $gostd
           - github.com/go-ozzo/ozzo-validation/v4
           - github.com/PuerkitoBio/goquery
+          - github.com/atifcppprogrammer/yflicks-yts
   govet:
     check-shadowing: true
   nolintlint:
