@@ -54,7 +54,7 @@ func (smb *SiteMovieBase) validateScraping() error {
 			is.URL,
 		),
 		validation.Field(
-			&smb.Link,
+			&smb.Image,
 			validation.Required,
 		),
 	)
