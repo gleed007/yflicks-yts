@@ -125,12 +125,16 @@ type testHTTPHandlerConfig struct {
 	pattern  string
 }
 
+func getHandlerConfigFor(t *testing.T, pattern, dir, filename string) testHTTPHandlerConfig {
+	t.Helper()
+	return testHTTPHandlerConfig{
+		filename: path.Join(dir, filename),
+		pattern:  path.Join("/", pattern),
+	}
+}
+
 func createTestServer(t *testing.T, config testHTTPHandlerConfig) *httptest.Server {
 	t.Helper()
-	if config.pattern == "" {
-		config.pattern = fmt.Sprintf("/%s", config.filename)
-	}
-
 	serveMux := &http.ServeMux{}
 	serveMux.HandleFunc(config.pattern, func(w http.ResponseWriter, r *http.Request) {
 		mockPath := path.Join("testdata", config.filename)
@@ -141,8 +145,10 @@ func createTestServer(t *testing.T, config testHTTPHandlerConfig) *httptest.Serv
 
 func TestClient_SearchMovies(t *testing.T) {
 	const (
-		queryTerm  = "Oppenheimer (2023)"
-		methodName = "Client.SearchMovies"
+		queryTerm   = "Oppenheimer (2023)"
+		methodName  = "Client.SearchMovies"
+		testdataDir = "search_movies"
+		pattern     = "list_movies.json"
 	)
 
 	const (
@@ -169,7 +175,7 @@ func TestClient_SearchMovies(t *testing.T) {
 		WithRTRatings: vWr,
 	}
 
-	mockedValidResponse := &yts.SearchMoviesResponse{
+	mockedOKResponse := &yts.SearchMoviesResponse{
 		Data: yts.SearchMoviesData{
 			MovieCount: 3,
 			PageNumber: 1,
@@ -262,20 +268,20 @@ func TestClient_SearchMovies(t *testing.T) {
 			wantErr:   yts.ErrFilterValidationFailure,
 		},
 		{
-			name:       "returns mocked valid response for default filters",
-			handlerCfg: testHTTPHandlerConfig{filename: "list_movies.json"},
+			name:       "returns mocked ok response for default filters",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.json"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
 			filters:    yts.DefaultSearchMoviesFilter(queryTerm),
-			want:       mockedValidResponse,
+			want:       mockedOKResponse,
 		},
 		{
-			name:       "returns mocked valid response for valid filters",
-			handlerCfg: testHTTPHandlerConfig{filename: "list_movies.json"},
+			name:       "returns mocked ok response for valid filters",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.json"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
 			filters:    validSearchFilters,
-			want:       mockedValidResponse,
+			want:       mockedOKResponse,
 		},
 	}
 	for _, tt := range tests {
@@ -298,11 +304,13 @@ func TestClient_SearchMovies(t *testing.T) {
 
 func TestClient_GetMovieDetails(t *testing.T) {
 	const (
-		movieID    = 57427
-		methodName = "Client.GetMovieDetails"
+		movieID     = 57427
+		methodName  = "Client.GetMovieDetails"
+		testdataDir = "get_movie_details"
+		pattern     = "movie_details.json"
 	)
 
-	mockedValidResponse := &yts.MovieDetailsResponse{
+	mockedOKResponse := &yts.MovieDetailsResponse{
 		Data: yts.MovieDetailsData{
 			Movie: yts.MovieDetails{
 				MoviePartial: yts.MoviePartial{ID: movieID},
@@ -321,13 +329,12 @@ func TestClient_GetMovieDetails(t *testing.T) {
 		wantErr    error
 	}{
 		{
-			name:       `returns error for "0" movieID`,
-			movieID:    0,
-			handlerCfg: testHTTPHandlerConfig{filename: "movie_details.json"},
-			clientCfg:  yts.DefaultClientConfig(),
-			ctx:        context.Background(),
-			filters:    &yts.MovieDetailsFilters{},
-			wantErr:    yts.ErrFilterValidationFailure,
+			name:      `returns error for "0" movieID`,
+			movieID:   0,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.MovieDetailsFilters{},
+			wantErr:   yts.ErrFilterValidationFailure,
 		},
 		{
 			name:      `returns error for negative movieID`,
@@ -337,13 +344,13 @@ func TestClient_GetMovieDetails(t *testing.T) {
 			wantErr:   yts.ErrFilterValidationFailure,
 		},
 		{
-			name:       "returns mocked valid response for valid movieID",
+			name:       "returns mocked ok response for valid movieID",
 			movieID:    movieID,
 			clientCfg:  yts.DefaultClientConfig(),
-			handlerCfg: testHTTPHandlerConfig{filename: "movie_details.json"},
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.json"),
 			ctx:        context.Background(),
 			filters:    yts.DefaultMovieDetailsFilters(),
-			want:       mockedValidResponse,
+			want:       mockedOKResponse,
 		},
 	}
 	for _, tt := range tests {
@@ -366,11 +373,13 @@ func TestClient_GetMovieDetails(t *testing.T) {
 
 func TestClient_GetMovieSuggestions(t *testing.T) {
 	const (
-		movieID    = 57427
-		methodName = "Client.GetMovieSuggestions"
+		movieID     = 57427
+		methodName  = "Client.GetMovieSuggestions"
+		testdataDir = "get_movie_suggestions"
+		pattern     = "movie_suggestions.json"
 	)
 
-	mockedValidResponse := &yts.MovieSuggestionsResponse{
+	mockedOKResponse := &yts.MovieSuggestionsResponse{
 		Data: yts.MovieSuggestionsData{
 			MovieCount: 0,
 			Movies: []yts.Movie{
@@ -405,12 +414,12 @@ func TestClient_GetMovieSuggestions(t *testing.T) {
 			wantErr:   yts.ErrFilterValidationFailure,
 		},
 		{
-			name:       "returns mocked valid response for valid movieID",
+			name:       "returns mocked ok response for valid movieID",
 			clientCfg:  yts.DefaultClientConfig(),
-			handlerCfg: testHTTPHandlerConfig{filename: "movie_suggestions.json"},
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.json"),
 			ctx:        context.Background(),
 			movieID:    movieID,
-			want:       mockedValidResponse,
+			want:       mockedOKResponse,
 		},
 	}
 	for _, tt := range tests {
@@ -432,9 +441,13 @@ func TestClient_GetMovieSuggestions(t *testing.T) {
 }
 
 func TestClient_GetTrendingMovies(t *testing.T) {
-	const methodName = "Client.GetTrendingMovies"
+	const (
+		methodName  = "Client.GetTrendingMovies"
+		testdataDir = "get_trending_movies"
+		pattern     = "/"
+	)
 
-	mockedValidResponse := &yts.TrendingMoviesResponse{
+	mockedOKResponse := &yts.TrendingMoviesResponse{
 		Data: yts.TrendingMoviesData{
 			Movies: []yts.SiteMovie{{
 				Rating: "7.6 / 10",
@@ -459,59 +472,59 @@ func TestClient_GetTrendingMovies(t *testing.T) {
 	}{
 		{
 			name:       "returns error when trending movies selector missing",
-			handlerCfg: testHTTPHandlerConfig{"trending_movies_missing_selector.html", "/"},
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "missing_selector.html"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
 			wantErr:    yts.ErrContentRetrievalFailure,
 		},
 		{
 			name:       `returns error when "Title" is missing from a scraped movie`,
-			handlerCfg: testHTTPHandlerConfig{"trending_movies_missing_title.html", "/"},
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "missing_title.html"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
 			wantErr:    yts.ErrContentRetrievalFailure,
 		},
 		{
-			name:       `returns error when "Year" is missing from a scraped movie`,
-			handlerCfg: testHTTPHandlerConfig{"trending_movies_missing_year.html", "/"},
+			name:       `returns error when "Year" is missing from scraped movie`,
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "missing_year.html"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
 			wantErr:    yts.ErrContentRetrievalFailure,
 		},
 		{
-			name:       `returns error when "Link" is missing from a scraped movie`,
-			handlerCfg: testHTTPHandlerConfig{"trending_movies_missing_link.html", "/"},
+			name:       `returns error when "Link" is missing from scraped movie`,
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "missing_link.html"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
 			wantErr:    yts.ErrContentRetrievalFailure,
 		},
 		{
-			name:       `returns error when "Image" is missing from a scraped movie`,
-			handlerCfg: testHTTPHandlerConfig{"trending_movies_missing_image.html", "/"},
+			name:       `returns error when "Image" is missing from scraped movie`,
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "missing_image.html"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
 			wantErr:    yts.ErrContentRetrievalFailure,
 		},
 		{
 			name:       `returns error when scraped "Rating" is invalid`,
-			handlerCfg: testHTTPHandlerConfig{"trending_movies_invalid_rating.html", "/"},
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_rating.html"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
 			wantErr:    yts.ErrContentRetrievalFailure,
 		},
 		{
 			name:       `returns error when scraped "Genres" are invalid`,
-			handlerCfg: testHTTPHandlerConfig{"trending_movies_invalid_genres.html", "/"},
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_genres.html"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
 			wantErr:    yts.ErrContentRetrievalFailure,
 		},
 		{
-			name:       "returns mocked valid response when scraping succeeds",
-			handlerCfg: testHTTPHandlerConfig{"trending_movies.html", "/"},
+			name:       "returns mocked ok response when scraping succeeds",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.html"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
-			want:       mockedValidResponse,
+			want:       mockedOKResponse,
 		},
 	}
 	for _, tt := range tests {
@@ -533,9 +546,13 @@ func TestClient_GetTrendingMovies(t *testing.T) {
 }
 
 func TestClient_GetHomePageContent(t *testing.T) {
-	const methodName = "Client.GetHomePageContent"
+	const (
+		methodName  = "Client.GetHomePageContent"
+		testdataDir = "get_homepage_content"
+		pattern     = "/"
+	)
 
-	mockedValidResponse := &yts.HomePageContentResponse{
+	mockedOKResponse := &yts.HomePageContentResponse{
 		Data: yts.HomePageContentData{
 			Popular: []yts.SiteMovie{{
 				Rating: "6.8 / 10",
@@ -580,11 +597,11 @@ func TestClient_GetHomePageContent(t *testing.T) {
 		wantErr    error
 	}{
 		{
-			name:       "returns mocked valid response when scraping succeeds",
-			handlerCfg: testHTTPHandlerConfig{"index.html", "/"},
+			name:       "returns mocked ok response when scraping succeeds",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.html"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
-			want:       mockedValidResponse,
+			want:       mockedOKResponse,
 		},
 	}
 	for _, tt := range tests {
