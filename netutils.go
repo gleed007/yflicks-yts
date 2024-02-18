@@ -8,16 +8,11 @@ import (
 	"net/url"
 )
 
-func (c *Client) newRequestWithContext(
-	ctx context.Context, targetURL string,
-) (*http.Response, error) {
-	parsedURL, err := url.Parse(targetURL)
-	if err != nil {
-		return nil, err
-	}
-
-	parsed := parsedURL.String()
-	request, err := http.NewRequestWithContext(ctx, "GET", parsed, http.NoBody)
+func (c *Client) newRequestWithContext(ctx context.Context, targetURL *url.URL) (
+	*http.Response, error,
+) {
+	targetURLString := targetURL.String()
+	request, err := http.NewRequestWithContext(ctx, "GET", targetURLString, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +21,7 @@ func (c *Client) newRequestWithContext(
 }
 
 func (c *Client) newJSONRequestWithContext(
-	ctx context.Context, targetURL string, payload any,
+	ctx context.Context, targetURL *url.URL, payload any,
 ) error {
 	response, err := c.newRequestWithContext(ctx, targetURL)
 	if err != nil {
@@ -39,7 +34,7 @@ func (c *Client) newJSONRequestWithContext(
 }
 
 func (c *Client) getAPIEndpoint(path, query string) string {
-	targetURL := fmt.Sprintf("%s/%s", c.config.APIBaseURL, path)
+	targetURL := fmt.Sprintf("%s/%s", &c.config.APIBaseURL, path)
 	if query == "" {
 		return targetURL
 	}

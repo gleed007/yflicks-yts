@@ -24,8 +24,8 @@ const (
 var debug = newLogger()
 
 type ClientConfig struct {
-	APIBaseURL      string
-	SiteURL         string
+	APIBaseURL      url.URL
+	SiteURL         url.URL
 	SiteDomain      string
 	TorrentTrackers []string
 	RequestTimeout  time.Duration
@@ -61,9 +61,14 @@ func DefaultTorrentTrackers() []string {
 }
 
 func DefaultClientConfig() ClientConfig {
+	var (
+		parsedSiteURL, _    = url.Parse(DefaultSiteURL)
+		parsedAPIBaseURL, _ = url.Parse(DefaultAPIBaseURL)
+	)
+
 	return ClientConfig{
-		APIBaseURL:      DefaultAPIBaseURL,
-		SiteURL:         DefaultSiteURL,
+		APIBaseURL:      *parsedAPIBaseURL,
+		SiteURL:         *parsedSiteURL,
 		SiteDomain:      DefaultSiteDomain,
 		RequestTimeout:  time.Minute,
 		TorrentTrackers: DefaultTorrentTrackers(),
@@ -130,7 +135,8 @@ func (c *Client) SearchMovies(ctx context.Context, filters *SearchMoviesFilters)
 	}
 
 	parsedPayload := &SearchMoviesResponse{}
-	targetURL := c.getAPIEndpoint("list_movies.json", queryString)
+	targetURLString := c.getAPIEndpoint("list_movies.json", queryString)
+	targetURL, _ := url.Parse(targetURLString)
 	err = c.newJSONRequestWithContext(ctx, targetURL, parsedPayload)
 	if err != nil {
 		return nil, err
@@ -162,7 +168,8 @@ func (c *Client) GetMovieDetails(ctx context.Context, movieID int, filters *Movi
 	}
 
 	parsedPayload := &MovieDetailsResponse{}
-	targetURL := c.getAPIEndpoint("movie_details.json", queryString)
+	targetURLString := c.getAPIEndpoint("movie_details.json", queryString)
+	targetURL, _ := url.Parse(targetURLString)
 	err := c.newJSONRequestWithContext(ctx, targetURL, parsedPayload)
 	if err != nil {
 		return nil, err
@@ -196,7 +203,8 @@ func (c *Client) GetMovieSuggestions(ctx context.Context, movieID int) (
 	)
 
 	parsedPayload := &MovieSuggestionsResponse{}
-	targetURL := c.getAPIEndpoint("movie_suggestions.json", queryString)
+	targetURLString := c.getAPIEndpoint("movie_suggestions.json", queryString)
+	targetURL, _ := url.Parse(targetURLString)
 	err := c.newJSONRequestWithContext(ctx, targetURL, parsedPayload)
 	if err != nil {
 		return nil, err
@@ -216,7 +224,8 @@ type TrendingMoviesResponse struct {
 func (c *Client) GetTrendingMovies(ctx context.Context) (
 	*TrendingMoviesResponse, error,
 ) {
-	pageURL := fmt.Sprintf("%s/trending-movies", c.config.SiteURL)
+	pageURLString := fmt.Sprintf("%s/trending-movies", &c.config.SiteURL)
+	pageURL, _ := url.Parse(pageURLString)
 	response, err := c.newRequestWithContext(ctx, pageURL)
 	if err != nil {
 		return nil, err
@@ -244,7 +253,7 @@ type HomePageContentResponse struct {
 func (c *Client) GetHomePageContent(ctx context.Context) (
 	*HomePageContentResponse, error,
 ) {
-	response, err := c.newRequestWithContext(ctx, c.config.SiteURL)
+	response, err := c.newRequestWithContext(ctx, &c.config.SiteURL)
 	if err != nil {
 		return nil, err
 	}
