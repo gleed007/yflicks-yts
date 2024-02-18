@@ -47,10 +47,15 @@ func TestDefaultTorrentTrackers(t *testing.T) {
 }
 
 func TestDefaultClientConfig(t *testing.T) {
+	var (
+		parsedSiteURL, _    = url.Parse(yts.DefaultSiteURL)
+		parsedAPIBaseURL, _ = url.Parse(yts.DefaultAPIBaseURL)
+	)
+
 	got := yts.DefaultClientConfig()
 	want := yts.ClientConfig{
-		APIBaseURL:      yts.DefaultAPIBaseURL,
-		SiteURL:         yts.DefaultSiteURL,
+		APIBaseURL:      *parsedAPIBaseURL,
+		SiteURL:         *parsedSiteURL,
 		SiteDomain:      yts.DefaultSiteDomain,
 		RequestTimeout:  time.Minute,
 		TorrentTrackers: yts.DefaultTorrentTrackers(),
@@ -184,7 +189,8 @@ func TestClient_SearchMovies(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.handlerCfg.filename != "" {
 				server := createTestServer(t, tt.handlerCfg)
-				clientCfg.APIBaseURL = server.URL
+				serverURL, _ := url.Parse(server.URL)
+				clientCfg.APIBaseURL = *serverURL
 				defer server.Close()
 			}
 
@@ -244,7 +250,8 @@ func TestClient_GetMovieDetails(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.handlerCfg.filename != "" {
 				server := createTestServer(t, tt.handlerCfg)
-				clientCfg.APIBaseURL = server.URL
+				serverURL, _ := url.Parse(server.URL)
+				clientCfg.APIBaseURL = *serverURL
 				defer server.Close()
 			}
 
@@ -303,7 +310,8 @@ func TestClient_GetMovieSuggestions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.handlerCfg.filename != "" {
 				server := createTestServer(t, tt.handlerCfg)
-				clientCfg.APIBaseURL = server.URL
+				serverURL, _ := url.Parse(server.URL)
+				clientCfg.APIBaseURL = *serverURL
 				defer server.Close()
 			}
 
@@ -354,7 +362,8 @@ func TestClient_GetTrendingMovies(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.handlerCfg.pattern != "" {
 				server := createTestServer(t, tt.handlerCfg)
-				clientCfg.SiteURL = server.URL
+				serverURL, _ := url.Parse(server.URL)
+				clientCfg.SiteURL = *serverURL
 				defer server.Close()
 			}
 
@@ -426,7 +435,8 @@ func TestClient_GetHomePageContent(t *testing.T) {
 			clientCfg := tt.clientCfg
 			if tt.handlerCfg.filename != "" {
 				server := createTestServer(t, tt.handlerCfg)
-				clientCfg.SiteURL = server.URL
+				serverURL, _ := url.Parse(server.URL)
+				clientCfg.SiteURL = *serverURL
 				defer server.Close()
 			}
 
