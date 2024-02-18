@@ -163,6 +163,11 @@ func TestClient_SearchMovies(t *testing.T) {
 		vWr = false
 	)
 
+	timedoutCtx, cancel := context.WithDeadline(
+		context.Background(), time.Now(),
+	)
+	defer cancel()
+
 	validSearchFilters := &yts.SearchMoviesFilters{
 		Limit:         vLt,
 		Page:          vPg,
@@ -268,6 +273,13 @@ func TestClient_SearchMovies(t *testing.T) {
 			wantErr:   yts.ErrFilterValidationFailure,
 		},
 		{
+			name:      "returns error when request context times out",
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       timedoutCtx,
+			filters:   validSearchFilters,
+			wantErr:   context.DeadlineExceeded,
+		},
+		{
 			name:       "returns mocked ok response for default filters",
 			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.json"),
 			clientCfg:  yts.DefaultClientConfig(),
@@ -310,6 +322,11 @@ func TestClient_GetMovieDetails(t *testing.T) {
 		pattern     = "movie_details.json"
 	)
 
+	timedoutCtx, cancel := context.WithDeadline(
+		context.Background(), time.Now(),
+	)
+	defer cancel()
+
 	mockedOKResponse := &yts.MovieDetailsResponse{
 		Data: yts.MovieDetailsData{
 			Movie: yts.MovieDetails{
@@ -342,6 +359,14 @@ func TestClient_GetMovieDetails(t *testing.T) {
 			ctx:       context.Background(),
 			movieID:   -1,
 			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      "returns error when request context times out",
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       timedoutCtx,
+			movieID:   movieID,
+			filters:   yts.DefaultMovieDetailsFilters(),
+			wantErr:   context.DeadlineExceeded,
 		},
 		{
 			name:       "returns mocked ok response for valid movieID",
@@ -379,6 +404,11 @@ func TestClient_GetMovieSuggestions(t *testing.T) {
 		pattern     = "movie_suggestions.json"
 	)
 
+	timedoutCtx, cancel := context.WithDeadline(
+		context.Background(), time.Now(),
+	)
+	defer cancel()
+
 	mockedOKResponse := &yts.MovieSuggestionsResponse{
 		Data: yts.MovieSuggestionsData{
 			MovieCount: 0,
@@ -414,6 +444,13 @@ func TestClient_GetMovieSuggestions(t *testing.T) {
 			wantErr:   yts.ErrFilterValidationFailure,
 		},
 		{
+			name:      "returns error when request context times out",
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       timedoutCtx,
+			movieID:   movieID,
+			wantErr:   context.DeadlineExceeded,
+		},
+		{
 			name:       "returns mocked ok response for valid movieID",
 			clientCfg:  yts.DefaultClientConfig(),
 			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.json"),
@@ -446,6 +483,11 @@ func TestClient_GetTrendingMovies(t *testing.T) {
 		testdataDir = "get_trending_movies"
 		pattern     = "/"
 	)
+
+	timedoutCtx, cancel := context.WithDeadline(
+		context.Background(), time.Now(),
+	)
+	defer cancel()
 
 	mockedOKResponse := &yts.TrendingMoviesResponse{
 		Data: yts.TrendingMoviesData{
@@ -520,6 +562,13 @@ func TestClient_GetTrendingMovies(t *testing.T) {
 			wantErr:    yts.ErrContentRetrievalFailure,
 		},
 		{
+			name:       "returns error when request context times out",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        timedoutCtx,
+			wantErr:    context.DeadlineExceeded,
+		},
+		{
 			name:       "returns mocked ok response when scraping succeeds",
 			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.html"),
 			clientCfg:  yts.DefaultClientConfig(),
@@ -551,6 +600,11 @@ func TestClient_GetHomePageContent(t *testing.T) {
 		testdataDir = "get_homepage_content"
 		pattern     = "/"
 	)
+
+	timedoutCtx, cancel := context.WithDeadline(
+		context.Background(), time.Now(),
+	)
+	defer cancel()
 
 	mockedOKResponse := &yts.HomePageContentResponse{
 		Data: yts.HomePageContentData{
@@ -596,6 +650,13 @@ func TestClient_GetHomePageContent(t *testing.T) {
 		want       *yts.HomePageContentResponse
 		wantErr    error
 	}{
+		{
+			name:       "returns error when request context times out",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        timedoutCtx,
+			wantErr:    context.DeadlineExceeded,
+		},
 		{
 			name:       "returns mocked ok response when scraping succeeds",
 			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.html"),
