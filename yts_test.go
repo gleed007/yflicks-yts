@@ -145,6 +145,30 @@ func TestClient_SearchMovies(t *testing.T) {
 		methodName = "Client.SearchMovies"
 	)
 
+	const (
+		vLt = 10
+		vPg = 1
+		vQl = yts.Quality1080p
+		vMr = 9
+		vQt = queryTerm
+		vGr = yts.GenreAnimation
+		vSb = yts.SortByDownloadCount
+		vOb = yts.OrderByAsc
+		vWr = false
+	)
+
+	validSearchFilters := &yts.SearchMoviesFilters{
+		Limit:         vLt,
+		Page:          vPg,
+		Quality:       vQl,
+		MinimumRating: vMr,
+		QueryTerm:     vQt,
+		Genre:         vGr,
+		SortBy:        vSb,
+		OrderBy:       vOb,
+		WithRTRatings: vWr,
+	}
+
 	mockedValidResponse := &yts.SearchMoviesResponse{
 		Data: yts.SearchMoviesData{
 			MovieCount: 3,
@@ -175,6 +199,69 @@ func TestClient_SearchMovies(t *testing.T) {
 			wantErr:   yts.ErrFilterValidationFailure,
 		},
 		{
+			name:      `returns error for invalid minimum "Limit" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{-1, vPg, vQl, vMr, vQt, vGr, vSb, vOb, vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for invalid maximum "Limit" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{51, vPg, vQl, vMr, vQt, vGr, vSb, vOb, vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for invalid minimum "Page" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{vLt, -1, vQl, vMr, vQt, vGr, vSb, vOb, vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for invalid "Quality" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{vLt, vPg, "invalid", vMr, vQt, vGr, vSb, vOb, vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for invalid minimum "MinimumRating" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{vLt, vPg, vQl, -1, vQt, vGr, vSb, vOb, vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for invalid maximum "MinimumRating" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{vLt, vPg, vQl, 10, vQt, vGr, vSb, vOb, vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for invalid "Genre" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{vLt, vPg, vQl, vMr, vQt, "invalid", vSb, vOb, vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for invalid "SortBy" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{vLt, vPg, vQl, vMr, vQt, vGr, "invalid", vOb, vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for invalid "OrderBy" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{vLt, vPg, vQl, vMr, vQt, vGr, vSb, "invalid", vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
 			name:       "returns mocked valid response for default filters",
 			handlerCfg: testHTTPHandlerConfig{filename: "list_movies.json"},
 			clientCfg:  yts.DefaultClientConfig(),
@@ -182,8 +269,15 @@ func TestClient_SearchMovies(t *testing.T) {
 			filters:    yts.DefaultSearchMoviesFilter(queryTerm),
 			want:       mockedValidResponse,
 		},
+		{
+			name:       "returns mocked valid response for valid filters",
+			handlerCfg: testHTTPHandlerConfig{filename: "list_movies.json"},
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			filters:    validSearchFilters,
+			want:       mockedValidResponse,
+		},
 	}
-
 	for _, tt := range tests {
 		clientCfg := tt.clientCfg
 		t.Run(tt.name, func(t *testing.T) {
@@ -227,13 +321,20 @@ func TestClient_GetMovieDetails(t *testing.T) {
 		wantErr    error
 	}{
 		{
-			name:       "returns error for invalid movieID",
+			name:       `returns error for "0" movieID`,
 			movieID:    0,
 			handlerCfg: testHTTPHandlerConfig{filename: "movie_details.json"},
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
 			filters:    &yts.MovieDetailsFilters{},
 			wantErr:    yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for negative movieID`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			movieID:   -1,
+			wantErr:   yts.ErrFilterValidationFailure,
 		},
 		{
 			name:       "returns mocked valid response for valid movieID",
@@ -290,10 +391,17 @@ func TestClient_GetMovieSuggestions(t *testing.T) {
 		wantErr    error
 	}{
 		{
-			name:      "returns error for invalid movieID",
+			name:      `returns error for "0" movieID`,
 			clientCfg: yts.DefaultClientConfig(),
 			ctx:       context.Background(),
 			movieID:   0,
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for negative movieID`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			movieID:   -1,
 			wantErr:   yts.ErrFilterValidationFailure,
 		},
 		{
