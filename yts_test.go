@@ -458,6 +458,55 @@ func TestClient_GetTrendingMovies(t *testing.T) {
 		wantErr    error
 	}{
 		{
+			name:       "returns error when trending movies selector missing",
+			handlerCfg: testHTTPHandlerConfig{"trending_movies_missing_selector.html", "/"},
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when "Title" is missing from a scraped movie`,
+			handlerCfg: testHTTPHandlerConfig{"trending_movies_missing_title.html", "/"},
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when "Year" is missing from a scraped movie`,
+			handlerCfg: testHTTPHandlerConfig{"trending_movies_missing_year.html", "/"},
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when "Link" is missing from a scraped movie`,
+			handlerCfg: testHTTPHandlerConfig{"trending_movies_missing_link.html", "/"},
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when "Image" is missing from a scraped movie`,
+			handlerCfg: testHTTPHandlerConfig{"trending_movies_missing_image.html", "/"},
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when scraped "Rating" is invalid`,
+			handlerCfg: testHTTPHandlerConfig{"trending_movies_invalid_rating.html", "/"},
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when scraped "Genres" are invalid`,
+			handlerCfg: testHTTPHandlerConfig{"trending_movies_invalid_genres.html", "/"},
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
 			name:       "returns mocked valid response when scraping succeeds",
 			handlerCfg: testHTTPHandlerConfig{"trending_movies.html", "/"},
 			clientCfg:  yts.DefaultClientConfig(),
