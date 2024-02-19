@@ -1,5 +1,28 @@
 # Changelog
 
+<a name="v0.9.5"></a>
+## [v0.9.5](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.9.1...v0.9.5) (2024-02-19)
+
+### Fix
+
+* ensured that `int` conversion errors are reported
+* added missing validation for `Quality` for upcoming movies
+* `SiteMovieBase.Image` field not being validated
+
+### Perf
+
+* **client:** create new `debugWriter` only when necessary
+
+### Refactor
+
+* **client:** leveraging `NewClientWithConfig` in implementing `NewClient`
+
+### Pull Requests
+
+* Merge pull request [#15](https://github.com/atifcppprogrammer/yflicks-yts/issues/15) from atifcppprogrammer/test/improve-coverage
+* Merge pull request [#13](https://github.com/atifcppprogrammer/yflicks-yts/issues/13) from atifcppprogrammer/test/table-driven-tests
+
+
 <a name="v0.9.1"></a>
 ## [v0.9.1](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.9.0...v0.9.1) (2024-02-06)
 
