@@ -548,6 +548,13 @@ func TestClient_GetTrendingMovies(t *testing.T) {
 			wantErr:    yts.ErrContentRetrievalFailure,
 		},
 		{
+			name:       `returns error when scraped "Year" is invalid`,
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_year.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
 			name:       `returns error when scraped "Rating" is invalid`,
 			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_rating.html"),
 			clientCfg:  yts.DefaultClientConfig(),
