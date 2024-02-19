@@ -86,7 +86,11 @@ func (smb *SiteMovieBase) scrape(s *goquery.Selection) error {
 	var yearInt int
 	var yearText = strings.Fields(year)
 	if len(yearText) >= 1 {
-		yearInt, _ = strconv.Atoi(yearText[0])
+		yearI, err := strconv.Atoi(yearText[0])
+		if err != nil {
+			return err
+		}
+		yearInt = yearI
 	}
 
 	genres := make([]Genre, 0)
@@ -167,11 +171,15 @@ func (sum *SiteUpcomingMovie) scrape(s *goquery.Selection) error {
 	const expectedYearElemLen = 2
 
 	var (
-		yearSel        = s.Find(movieYearCSS)
-		progressSel    = yearSel.Find(movieProgressCSS)
-		progress, _    = progressSel.Attr("value")
-		progressInt, _ = strconv.Atoi(progress)
+		yearSel     = s.Find(movieYearCSS)
+		progressSel = yearSel.Find(movieProgressCSS)
+		progress, _ = progressSel.Attr("value")
 	)
+
+	progressInt, err := strconv.Atoi(progress)
+	if err != nil {
+		return err
+	}
 
 	var quality Quality
 	var yearText = strings.Fields(yearSel.Text())
