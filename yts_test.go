@@ -125,12 +125,16 @@ type testHTTPHandlerConfig struct {
 	pattern  string
 }
 
+func getHandlerConfigFor(t *testing.T, pattern, dir, filename string) testHTTPHandlerConfig {
+	t.Helper()
+	return testHTTPHandlerConfig{
+		filename: path.Join(dir, filename),
+		pattern:  path.Join("/", pattern),
+	}
+}
+
 func createTestServer(t *testing.T, config testHTTPHandlerConfig) *httptest.Server {
 	t.Helper()
-	if config.pattern == "" {
-		config.pattern = fmt.Sprintf("/%s", config.filename)
-	}
-
 	serveMux := &http.ServeMux{}
 	serveMux.HandleFunc(config.pattern, func(w http.ResponseWriter, r *http.Request) {
 		mockPath := path.Join("testdata", config.filename)
@@ -141,11 +145,42 @@ func createTestServer(t *testing.T, config testHTTPHandlerConfig) *httptest.Serv
 
 func TestClient_SearchMovies(t *testing.T) {
 	const (
-		queryTerm  = "Oppenheimer (2023)"
-		methodName = "Client.SearchMovies"
+		queryTerm   = "Oppenheimer (2023)"
+		methodName  = "Client.SearchMovies"
+		testdataDir = "search_movies"
+		pattern     = "list_movies.json"
 	)
 
-	mockedValidResponse := &yts.SearchMoviesResponse{
+	const (
+		vLt = 10
+		vPg = 1
+		vQl = yts.Quality1080p
+		vMr = 9
+		vQt = queryTerm
+		vGr = yts.GenreAnimation
+		vSb = yts.SortByDownloadCount
+		vOb = yts.OrderByAsc
+		vWr = false
+	)
+
+	timedoutCtx, cancel := context.WithDeadline(
+		context.Background(), time.Now(),
+	)
+	defer cancel()
+
+	validSearchFilters := &yts.SearchMoviesFilters{
+		Limit:         vLt,
+		Page:          vPg,
+		Quality:       vQl,
+		MinimumRating: vMr,
+		QueryTerm:     vQt,
+		Genre:         vGr,
+		SortBy:        vSb,
+		OrderBy:       vOb,
+		WithRTRatings: vWr,
+	}
+
+	mockedOKResponse := &yts.SearchMoviesResponse{
 		Data: yts.SearchMoviesData{
 			MovieCount: 3,
 			PageNumber: 1,
@@ -175,15 +210,92 @@ func TestClient_SearchMovies(t *testing.T) {
 			wantErr:   yts.ErrFilterValidationFailure,
 		},
 		{
-			name:       "returns mocked valid response for default filters",
-			handlerCfg: testHTTPHandlerConfig{filename: "list_movies.json"},
+			name:      `returns error for invalid minimum "Limit" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{-1, vPg, vQl, vMr, vQt, vGr, vSb, vOb, vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for invalid maximum "Limit" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{51, vPg, vQl, vMr, vQt, vGr, vSb, vOb, vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for invalid minimum "Page" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{vLt, -1, vQl, vMr, vQt, vGr, vSb, vOb, vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for invalid "Quality" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{vLt, vPg, "invalid", vMr, vQt, vGr, vSb, vOb, vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for invalid minimum "MinimumRating" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{vLt, vPg, vQl, -1, vQt, vGr, vSb, vOb, vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for invalid maximum "MinimumRating" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{vLt, vPg, vQl, 10, vQt, vGr, vSb, vOb, vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for invalid "Genre" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{vLt, vPg, vQl, vMr, vQt, "invalid", vSb, vOb, vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for invalid "SortBy" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{vLt, vPg, vQl, vMr, vQt, vGr, "invalid", vOb, vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      `returns error for invalid "OrderBy" filter`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.SearchMoviesFilters{vLt, vPg, vQl, vMr, vQt, vGr, vSb, "invalid", vWr},
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      "returns error when request context times out",
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       timedoutCtx,
+			filters:   validSearchFilters,
+			wantErr:   context.DeadlineExceeded,
+		},
+		{
+			name:       "returns mocked ok response for default filters",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.json"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
 			filters:    yts.DefaultSearchMoviesFilter(queryTerm),
-			want:       mockedValidResponse,
+			want:       mockedOKResponse,
+		},
+		{
+			name:       "returns mocked ok response for valid filters",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.json"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			filters:    validSearchFilters,
+			want:       mockedOKResponse,
 		},
 	}
-
 	for _, tt := range tests {
 		clientCfg := tt.clientCfg
 		t.Run(tt.name, func(t *testing.T) {
@@ -204,11 +316,18 @@ func TestClient_SearchMovies(t *testing.T) {
 
 func TestClient_GetMovieDetails(t *testing.T) {
 	const (
-		movieID    = 57427
-		methodName = "Client.GetMovieDetails"
+		movieID     = 57427
+		methodName  = "Client.GetMovieDetails"
+		testdataDir = "get_movie_details"
+		pattern     = "movie_details.json"
 	)
 
-	mockedValidResponse := &yts.MovieDetailsResponse{
+	timedoutCtx, cancel := context.WithDeadline(
+		context.Background(), time.Now(),
+	)
+	defer cancel()
+
+	mockedOKResponse := &yts.MovieDetailsResponse{
 		Data: yts.MovieDetailsData{
 			Movie: yts.MovieDetails{
 				MoviePartial: yts.MoviePartial{ID: movieID},
@@ -227,22 +346,36 @@ func TestClient_GetMovieDetails(t *testing.T) {
 		wantErr    error
 	}{
 		{
-			name:       "returns error for invalid movieID",
-			movieID:    0,
-			handlerCfg: testHTTPHandlerConfig{filename: "movie_details.json"},
-			clientCfg:  yts.DefaultClientConfig(),
-			ctx:        context.Background(),
-			filters:    &yts.MovieDetailsFilters{},
-			wantErr:    yts.ErrFilterValidationFailure,
+			name:      `returns error for "0" movieID`,
+			movieID:   0,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			filters:   &yts.MovieDetailsFilters{},
+			wantErr:   yts.ErrFilterValidationFailure,
 		},
 		{
-			name:       "returns mocked valid response for valid movieID",
+			name:      `returns error for negative movieID`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			movieID:   -1,
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      "returns error when request context times out",
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       timedoutCtx,
+			movieID:   movieID,
+			filters:   yts.DefaultMovieDetailsFilters(),
+			wantErr:   context.DeadlineExceeded,
+		},
+		{
+			name:       "returns mocked ok response for valid movieID",
 			movieID:    movieID,
 			clientCfg:  yts.DefaultClientConfig(),
-			handlerCfg: testHTTPHandlerConfig{filename: "movie_details.json"},
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.json"),
 			ctx:        context.Background(),
 			filters:    yts.DefaultMovieDetailsFilters(),
-			want:       mockedValidResponse,
+			want:       mockedOKResponse,
 		},
 	}
 	for _, tt := range tests {
@@ -265,11 +398,18 @@ func TestClient_GetMovieDetails(t *testing.T) {
 
 func TestClient_GetMovieSuggestions(t *testing.T) {
 	const (
-		movieID    = 57427
-		methodName = "Client.GetMovieSuggestions"
+		movieID     = 57427
+		methodName  = "Client.GetMovieSuggestions"
+		testdataDir = "get_movie_suggestions"
+		pattern     = "movie_suggestions.json"
 	)
 
-	mockedValidResponse := &yts.MovieSuggestionsResponse{
+	timedoutCtx, cancel := context.WithDeadline(
+		context.Background(), time.Now(),
+	)
+	defer cancel()
+
+	mockedOKResponse := &yts.MovieSuggestionsResponse{
 		Data: yts.MovieSuggestionsData{
 			MovieCount: 0,
 			Movies: []yts.Movie{
@@ -290,19 +430,33 @@ func TestClient_GetMovieSuggestions(t *testing.T) {
 		wantErr    error
 	}{
 		{
-			name:      "returns error for invalid movieID",
+			name:      `returns error for "0" movieID`,
 			clientCfg: yts.DefaultClientConfig(),
 			ctx:       context.Background(),
 			movieID:   0,
 			wantErr:   yts.ErrFilterValidationFailure,
 		},
 		{
-			name:       "returns mocked valid response for valid movieID",
+			name:      `returns error for negative movieID`,
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			movieID:   -1,
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:      "returns error when request context times out",
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       timedoutCtx,
+			movieID:   movieID,
+			wantErr:   context.DeadlineExceeded,
+		},
+		{
+			name:       "returns mocked ok response for valid movieID",
 			clientCfg:  yts.DefaultClientConfig(),
-			handlerCfg: testHTTPHandlerConfig{filename: "movie_suggestions.json"},
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.json"),
 			ctx:        context.Background(),
 			movieID:    movieID,
-			want:       mockedValidResponse,
+			want:       mockedOKResponse,
 		},
 	}
 	for _, tt := range tests {
@@ -324,9 +478,18 @@ func TestClient_GetMovieSuggestions(t *testing.T) {
 }
 
 func TestClient_GetTrendingMovies(t *testing.T) {
-	const methodName = "Client.GetTrendingMovies"
+	const (
+		methodName  = "Client.GetTrendingMovies"
+		testdataDir = "get_trending_movies"
+		pattern     = "/"
+	)
 
-	mockedValidResponse := &yts.TrendingMoviesResponse{
+	timedoutCtx, cancel := context.WithDeadline(
+		context.Background(), time.Now(),
+	)
+	defer cancel()
+
+	mockedOKResponse := &yts.TrendingMoviesResponse{
 		Data: yts.TrendingMoviesData{
 			Movies: []yts.SiteMovie{{
 				Rating: "7.6 / 10",
@@ -350,11 +513,74 @@ func TestClient_GetTrendingMovies(t *testing.T) {
 		wantErr    error
 	}{
 		{
-			name:       "returns mocked valid response when scraping succeeds",
-			handlerCfg: testHTTPHandlerConfig{"trending_movies.html", "/"},
+			name:       "returns error when trending movies selector missing",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "missing_selector.html"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
-			want:       mockedValidResponse,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when "Title" is missing from a scraped movie`,
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "missing_title.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when "Year" is missing from scraped movie`,
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "missing_year.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when "Link" is missing from scraped movie`,
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "missing_link.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when "Image" is missing from scraped movie`,
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "missing_image.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when scraped "Year" is invalid`,
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_year.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when scraped "Rating" is invalid`,
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_rating.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when scraped "Genres" are invalid`,
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_genres.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when request context times out",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        timedoutCtx,
+			wantErr:    context.DeadlineExceeded,
+		},
+		{
+			name:       "returns mocked ok response when scraping succeeds",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			want:       mockedOKResponse,
 		},
 	}
 	for _, tt := range tests {
@@ -376,9 +602,18 @@ func TestClient_GetTrendingMovies(t *testing.T) {
 }
 
 func TestClient_GetHomePageContent(t *testing.T) {
-	const methodName = "Client.GetHomePageContent"
+	const (
+		methodName  = "Client.GetHomePageContent"
+		testdataDir = "get_homepage_content"
+		pattern     = "/"
+	)
 
-	mockedValidResponse := &yts.HomePageContentResponse{
+	timedoutCtx, cancel := context.WithDeadline(
+		context.Background(), time.Now(),
+	)
+	defer cancel()
+
+	mockedOKResponse := &yts.HomePageContentResponse{
 		Data: yts.HomePageContentData{
 			Popular: []yts.SiteMovie{{
 				Rating: "6.8 / 10",
@@ -423,11 +658,74 @@ func TestClient_GetHomePageContent(t *testing.T) {
 		wantErr    error
 	}{
 		{
-			name:       "returns mocked valid response when scraping succeeds",
-			handlerCfg: testHTTPHandlerConfig{"index.html", "/"},
+			name:       "returns error when popular movies selector missing",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "missing_popular.html"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
-			want:       mockedValidResponse,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when latest torrents selector missing",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "missing_latest.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when upcoming movies selector missing",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "missing_upcoming.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when validation for scraped popular movies fail",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_popular.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when validation for scraped latest torrents fail",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_latest.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when validation for scraped upcoming movies fail",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_upcoming.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when scraped "Quality" is invalid`,
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_quality.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when scraped "Progress" is invalid`,
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_progress.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when request context times out",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        timedoutCtx,
+			wantErr:    context.DeadlineExceeded,
+		},
+		{
+			name:       "returns mocked ok response when scraping succeeds",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			want:       mockedOKResponse,
 		},
 	}
 	for _, tt := range tests {
