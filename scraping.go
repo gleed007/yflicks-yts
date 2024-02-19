@@ -151,6 +151,10 @@ func (sum *SiteUpcomingMovie) validateScraping() error {
 	mErr := validation.ValidateStruct(
 		sum,
 		validation.Field(
+			&sum.Quality,
+			validateQualityRule,
+		),
+		validation.Field(
 			&sum.Progress,
 			validation.Min(0),
 			validation.Max(maxProgress),
