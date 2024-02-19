@@ -651,6 +651,62 @@ func TestClient_GetHomePageContent(t *testing.T) {
 		wantErr    error
 	}{
 		{
+			name:       "returns error when popular movies selector missing",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "missing_popular.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when latest torrents selector missing",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "missing_latest.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when upcoming movies selector missing",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "missing_upcoming.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when validation for scraped popular movies fail",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_popular.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when validation for scraped latest torrents fail",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_latest.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when validation for scraped upcoming movies fail",
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_upcoming.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when scraped "Quality" is invalid`,
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_quality.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       `returns error when scraped "Progress" is invalid`,
+			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "invalid_progress.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
 			name:       "returns error when request context times out",
 			handlerCfg: getHandlerConfigFor(t, pattern, testdataDir, "ok_response.html"),
 			clientCfg:  yts.DefaultClientConfig(),
