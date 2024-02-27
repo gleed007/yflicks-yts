@@ -3,9 +3,14 @@ package yts
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+)
+
+var ErrUnexpectedHTTPResponseStatus = errors.New(
+	"unexpected_http_response_status",
 )
 
 func (c *Client) newRequestWithContext(ctx context.Context, targetURL *url.URL) (
@@ -17,7 +22,17 @@ func (c *Client) newRequestWithContext(ctx context.Context, targetURL *url.URL) 
 		return nil, err
 	}
 
-	return c.netClient.Do(request)
+	response, err := c.netClient.Do(request)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.StatusCode < 200 || 299 < response.StatusCode {
+		sErr := fmt.Errorf("received response with status code: %d", response.StatusCode)
+		return nil, wrapErr(ErrUnexpectedHTTPResponseStatus, sErr)
+	}
+
+	return response, err
 }
 
 func (c *Client) newJSONRequestWithContext(
