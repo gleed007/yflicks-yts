@@ -121,15 +121,25 @@ func TestNewClient(t *testing.T) {
 }
 
 type testHTTPHandlerConfig struct {
-	filename string
-	pattern  string
+	filename   string
+	pattern    string
+	statusCode int
 }
 
 func defaultHandlerConfig(t *testing.T, pattern, dir, filename string) testHTTPHandlerConfig {
 	t.Helper()
 	return testHTTPHandlerConfig{
-		filename: path.Join(dir, filename),
-		pattern:  path.Join("/", pattern),
+		filename:   path.Join(dir, filename),
+		pattern:    path.Join("/", pattern),
+		statusCode: http.StatusOK,
+	}
+}
+
+func handlerConfigWithStatusCode(t *testing.T, pattern string, statusCode int) testHTTPHandlerConfig {
+	t.Helper()
+	return testHTTPHandlerConfig{
+		pattern:    path.Join("/", pattern),
+		statusCode: statusCode,
 	}
 }
 
@@ -137,8 +147,14 @@ func createTestServer(t *testing.T, config testHTTPHandlerConfig) *httptest.Serv
 	t.Helper()
 	serveMux := &http.ServeMux{}
 	serveMux.HandleFunc(config.pattern, func(w http.ResponseWriter, r *http.Request) {
-		mockPath := path.Join("testdata", config.filename)
-		http.ServeFile(w, r, mockPath)
+		switch config.statusCode {
+		case http.StatusOK:
+			mockPath := path.Join("testdata", config.filename)
+			http.ServeFile(w, r, mockPath)
+		default:
+			w.WriteHeader(config.statusCode)
+			fmt.Fprintf(w, "status_code: %d", config.statusCode)
+		}
 	})
 	return httptest.NewServer(serveMux)
 }
@@ -280,6 +296,14 @@ func TestClient_SearchMoviesWithContext(t *testing.T) {
 			wantErr:   context.DeadlineExceeded,
 		},
 		{
+			name:       "returns error when response status is outside 2.x.x range",
+			handlerCfg: handlerConfigWithStatusCode(t, pattern, http.StatusNotFound),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			filters:    validSearchFilters,
+			wantErr:    yts.ErrUnexpectedHTTPResponseStatus,
+		},
+		{
 			name:       "returns mocked ok response for default filters",
 			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "ok_response.json"),
 			clientCfg:  yts.DefaultClientConfig(),
@@ -299,7 +323,7 @@ func TestClient_SearchMoviesWithContext(t *testing.T) {
 	for _, tt := range tests {
 		clientCfg := tt.clientCfg
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.handlerCfg.filename != "" {
+			if tt.handlerCfg.pattern != "" {
 				server := createTestServer(t, tt.handlerCfg)
 				serverURL, _ := url.Parse(server.URL)
 				clientCfg.APIBaseURL = *serverURL
@@ -369,6 +393,15 @@ func TestClient_GetMovieDetailsWithContext(t *testing.T) {
 			wantErr:   context.DeadlineExceeded,
 		},
 		{
+			name:       "returns error when response status is outside 2.x.x range",
+			handlerCfg: handlerConfigWithStatusCode(t, pattern, http.StatusNotFound),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieID:    movieID,
+			filters:    yts.DefaultMovieDetailsFilters(),
+			wantErr:    yts.ErrUnexpectedHTTPResponseStatus,
+		},
+		{
 			name:       "returns mocked ok response for valid movieID",
 			movieID:    movieID,
 			clientCfg:  yts.DefaultClientConfig(),
@@ -381,7 +414,7 @@ func TestClient_GetMovieDetailsWithContext(t *testing.T) {
 	for _, tt := range tests {
 		clientCfg := tt.clientCfg
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.handlerCfg.filename != "" {
+			if tt.handlerCfg.pattern != "" {
 				server := createTestServer(t, tt.handlerCfg)
 				serverURL, _ := url.Parse(server.URL)
 				clientCfg.APIBaseURL = *serverURL
@@ -451,6 +484,14 @@ func TestClient_GetMovieSuggestionsWithContext(t *testing.T) {
 			wantErr:   context.DeadlineExceeded,
 		},
 		{
+			name:       "returns error when response status is outside 2.x.x range",
+			handlerCfg: handlerConfigWithStatusCode(t, pattern, http.StatusNotFound),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieID:    movieID,
+			wantErr:    yts.ErrUnexpectedHTTPResponseStatus,
+		},
+		{
 			name:       "returns mocked ok response for valid movieID",
 			clientCfg:  yts.DefaultClientConfig(),
 			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "ok_response.json"),
@@ -462,7 +503,7 @@ func TestClient_GetMovieSuggestionsWithContext(t *testing.T) {
 	for _, tt := range tests {
 		clientCfg := tt.clientCfg
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.handlerCfg.filename != "" {
+			if tt.handlerCfg.pattern != "" {
 				server := createTestServer(t, tt.handlerCfg)
 				serverURL, _ := url.Parse(server.URL)
 				clientCfg.APIBaseURL = *serverURL
@@ -574,6 +615,13 @@ func TestClient_GetTrendingMoviesWithContext(t *testing.T) {
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        timedoutCtx,
 			wantErr:    context.DeadlineExceeded,
+		},
+		{
+			name:       "returns error when response status is outside 2.x.x range",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "non_existant.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrUnexpectedHTTPResponseStatus,
 		},
 		{
 			name:       "returns mocked ok response when scraping succeeds",
@@ -721,6 +769,13 @@ func TestClient_GetHomePageContentWithContext(t *testing.T) {
 			wantErr:    context.DeadlineExceeded,
 		},
 		{
+			name:       "returns error when response status is outside 2.x.x range",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "non_existant.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			wantErr:    yts.ErrUnexpectedHTTPResponseStatus,
+		},
+		{
 			name:       "returns mocked ok response when scraping succeeds",
 			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "ok_response.html"),
 			clientCfg:  yts.DefaultClientConfig(),
@@ -731,7 +786,7 @@ func TestClient_GetHomePageContentWithContext(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			clientCfg := tt.clientCfg
-			if tt.handlerCfg.filename != "" {
+			if tt.handlerCfg.pattern != "" {
 				server := createTestServer(t, tt.handlerCfg)
 				serverURL, _ := url.Parse(server.URL)
 				clientCfg.SiteURL = *serverURL
