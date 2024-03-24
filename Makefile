@@ -1,8 +1,13 @@
 .PHONY: setup test test_coverage build format
 
-setup: 
+setup: setup_devdeps
+	@go mod download
 	@cp githooks/* .git/hooks
 	@ls githooks | xargs -I {} chmod +x .git/hooks/{}
+
+setup_devdeps:
+	@go install github.com/git-chglog/git-chglog/cmd/git-chglog@latest
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 test: 
 ifeq ($(verbose), true) 
