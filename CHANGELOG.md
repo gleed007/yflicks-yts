@@ -1,7 +1,23 @@
 # Changelog
 
+<a name="v0.9.6"></a>
+## [v0.9.6](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.9.5...v0.9.6) (2024-03-25)
+
+### Feat
+
+* created additional methods wrapping `context.Context` arg methods
+
+### Fix
+
+* return error when response status not in 2.x.x range
+
+### Pull Requests
+
+* Merge pull request [#16](https://github.com/atifcppprogrammer/yflicks-yts/issues/16) from atifcppprogrammer/feature/context-method-wrappers
+
+
 <a name="v0.9.5"></a>
-## [v0.9.5](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.9.1...v0.9.5) (2024-02-19)
+## [v0.9.5](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.9.1...v0.9.5) (2024-02-20)
 
 ### Fix
 
