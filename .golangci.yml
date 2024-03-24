@@ -20,7 +20,8 @@ linters-settings:
           - github.com/PuerkitoBio/goquery
           - github.com/atifcppprogrammer/yflicks-yts
   govet:
-    check-shadowing: true
+    enable:
+      - shadow
   nolintlint:
     require-explanation: true
     require-specific: true

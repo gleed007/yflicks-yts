@@ -94,7 +94,7 @@ func (smb *SiteMovieBase) scrape(s *goquery.Selection) error {
 	}
 
 	genres := make([]Genre, 0)
-	genreSel.Each(func(i int, s *goquery.Selection) {
+	genreSel.Each(func(_ int, s *goquery.Selection) {
 		genres = append(genres, Genre(s.Text()))
 	})
 
