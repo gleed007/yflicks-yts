@@ -1,4 +1,4 @@
-.PHONY: setup test test_coverage build release format
+.PHONY: setup setup_devdeps test test_coverage build release format
 
 setup: setup_devdeps
 	@go mod download
