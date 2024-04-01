@@ -3,6 +3,7 @@ package yts
 import (
 	"errors"
 	"fmt"
+	"io"
 	"regexp"
 	"strconv"
 	"strings"
@@ -17,6 +18,7 @@ const (
 	popularCSS  = "div#popular-downloads div.browse-movie-wrap"
 	latestCSS   = "div.content-dark div.home-movies div.browse-movie-wrap"
 	upcomingCSS = "div.content-dark ~ div.home-content div.browse-movie-wrap"
+	directorCSS = "div#movie-content div#movie-sub-info div#crew div.directors"
 )
 
 const (
@@ -26,6 +28,11 @@ const (
 	movieTitleCSS    = "a.browse-movie-title"
 	movieProgressCSS = "div.browse-movie-year progress"
 	movieGenreCSS    = "div.browse-movie-wrap h4:not([class='rating'])"
+)
+
+const (
+	directorThumbCSS = "div.list-cast a.avatar-thumb img"
+	directorNameCSS  = "div.list-cast-info a.name-cast span span"
 )
 
 type SiteMovieBase struct {
@@ -192,6 +199,37 @@ func (sum *SiteUpcomingMovie) scrape(s *goquery.Selection) error {
 	return sum.validateScraping()
 }
 
+type SiteMovieDirector struct {
+	Name          string `json:"name"`
+	URLSmallImage string `json:"url_small_image"`
+}
+
+func (smd *SiteMovieDirector) validateScraping() error {
+	return validation.ValidateStruct(
+		smd,
+		validation.Field(
+			&smd.Name,
+			validation.Required,
+		),
+		validation.Field(
+			&smd.URLSmallImage,
+			validation.Required,
+			is.URL,
+		),
+	)
+}
+
+func (smd *SiteMovieDirector) scrape(s *goquery.Selection) error {
+	var (
+		nameSel     = s.Find(directorNameCSS)
+		thumbImgSel = s.Find(directorThumbCSS)
+	)
+
+	smd.Name = nameSel.Text()
+	smd.URLSmallImage, _ = thumbImgSel.Attr("src")
+	return smd.validateScraping()
+}
+
 func (c *Client) scrapeTrendingMoviesData(d *goquery.Document) (*TrendingMoviesData, error) {
 	selection := d.Find(trendingCSS)
 	if selection.Length() == 0 {
@@ -301,4 +339,27 @@ func (c *Client) scrapeHomePageContentData(d *goquery.Document) (*HomePageConten
 	}
 
 	return response, nil
+}
+
+func (c *Client) scrapeMovieDirectorData(r io.Reader) (*MovieDirectorData, error) {
+	document, err := goquery.NewDocumentFromReader(r)
+	if err != nil {
+		debug.Println(err)
+		return nil, err
+	}
+
+	directorSel := document.Find(directorCSS)
+	if directorSel.Length() == 0 {
+		err := fmt.Errorf("no elements found for %q", directorCSS)
+		debug.Println(err)
+		return nil, err
+	}
+
+	director := &SiteMovieDirector{}
+	if err := director.scrape(directorSel); err != nil {
+		debug.Println(err)
+		return nil, err
+	}
+
+	return &MovieDirectorData{*director}, nil
 }
