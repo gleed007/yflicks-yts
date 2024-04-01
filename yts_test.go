@@ -792,6 +792,111 @@ func TestClient_HomePageContentWithContext(t *testing.T) {
 	}
 }
 
+func TestClient_GetMovieDirectorWithContext(t *testing.T) {
+	const (
+		methodName  = "Client.GetMovieDirector"
+		testdataDir = "get_movie_director"
+		movieSlug   = "road-house-1989"
+		pattern     = "/movies/road-house-1989"
+	)
+
+	timedoutCtx, cancel := context.WithDeadline(
+		context.Background(), time.Now(),
+	)
+	defer cancel()
+
+	mockedOKResponse := yts.MovieDirectorResponse{
+		Data: yts.MovieDirectorData{
+			Director: yts.SiteMovieDirector{
+				Name:          "Rowdy Herrington",
+				URLSmallImage: "https://img.yts.mx/assets/images/actors/thumb/nm1509613.jpg",
+			},
+		},
+	}
+
+	tests := []struct {
+		name       string
+		handlerCfg testHTTPHandlerConfig
+		clientCfg  yts.ClientConfig
+		ctx        context.Context
+		movieSlug  string
+		want       *yts.MovieDirectorResponse
+		wantErr    error
+	}{
+		{
+			name:      "returns error when movie slug is an empty string",
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			movieSlug: "",
+			wantErr:   yts.ErrFilterValidationFailure,
+		},
+		{
+			name:       "returns error when director selector is missing",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "missing_director.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when director name is missing",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "missing_name.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when director thumbnail URL is missing",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "invalid_thumbnail.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when request context times out",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "ok_response.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        timedoutCtx,
+			movieSlug:  movieSlug,
+			wantErr:    context.DeadlineExceeded,
+		},
+		{
+			name:       "returns error when response status is outside 2.x.x range",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "non_existant.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrUnexpectedHTTPResponseStatus,
+		},
+		{
+			name:       "returns mocked ok response when scraping succeeds",
+			clientCfg:  yts.DefaultClientConfig(),
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "ok_response.html"),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			want:       &mockedOKResponse,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clientCfg := tt.clientCfg
+			if tt.handlerCfg.pattern != "" {
+				server := createTestServer(t, tt.handlerCfg)
+				serverURL, _ := url.Parse(server.URL)
+				clientCfg.SiteURL = *serverURL
+				defer server.Close()
+			}
+
+			c := yts.NewClientWithConfig(&clientCfg)
+			got, err := c.GetMovieDirectorWithContext(tt.ctx, tt.movieSlug)
+			assertError(t, methodName, err, tt.wantErr)
+			assertEqual(t, methodName, got, tt.want)
+		})
+	}
+}
+
 func TestClient_MagnetLinks(t *testing.T) {
 	var (
 		config    = yts.DefaultClientConfig()
