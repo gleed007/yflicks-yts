@@ -322,6 +322,43 @@ func (c *Client) GetMovieDirectorWithContext(ctx context.Context, movieSlug stri
 	return &MovieDirectorResponse{*data}, nil
 }
 
+type MovieReviewsData struct {
+	Reviews         []SiteMovieReview `json:"reviews"`
+	ReviewsMoreLink string            `json:"reviews_more_link"`
+}
+
+type MovieReviewsResponse struct {
+	Data MovieReviewsData `json:"data"`
+}
+
+func (c *Client) GetMovieReviewsWithContext(ctx context.Context, movieSlug string) (
+	*MovieReviewsResponse, error,
+) {
+	if movieSlug == "" {
+		err := fmt.Errorf("provided movie slug cannot be an empty")
+		return nil, wrapErr(ErrFilterValidationFailure, err)
+	}
+
+	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
+	pageURL, _ := url.Parse(pageURLString)
+	response, err := c.newRequestWithContext(ctx, pageURL)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+	data, err := c.scrapeMovieReviewsData(response.Body)
+	if err != nil {
+		return nil, ErrContentRetrievalFailure
+	}
+
+	return &MovieReviewsResponse{*data}, nil
+}
+
+func (c *Client) GetMovieReviews(movieSlug string) (*MovieReviewsResponse, error) {
+	return c.GetMovieReviewsWithContext(context.Background(), movieSlug)
+}
+
 type TorrentMagnets map[Quality]string
 
 func (c *Client) MagnetLinks(t TorrentInfoGetter) TorrentMagnets {
