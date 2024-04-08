@@ -35,6 +35,13 @@ const (
 	directorNameCSS  = "div.list-cast-info a.name-cast span span"
 )
 
+const (
+	reviewsCSS      = "div#movie-reviews div.review"
+	reviewRatingCSS = "div.review-properties span.review-rating"
+	reviewAuthorCSS = "div.review-properties span.review-author"
+	reviewsMoreCSS  = "div#movie-reviews a.more-reviews"
+)
+
 // The SiteMovieBase type contains all the information required by both the
 // and SiteMovieUpcoming types.
 type SiteMovieBase struct {
@@ -239,6 +246,50 @@ func (smd *SiteMovieDirector) scrape(s *goquery.Selection) error {
 	return smd.validateScraping()
 }
 
+type SiteMovieReview struct {
+	Author  string `json:"author"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+	Rating  string `json:"rating"`
+}
+
+func (smr *SiteMovieReview) validateScraping() error {
+	return validation.ValidateStruct(
+		smr,
+		validation.Field(
+			&smr.Author,
+			validation.Required,
+		),
+		validation.Field(
+			&smr.Title,
+			validation.Required,
+		),
+		validation.Field(
+			&smr.Content,
+			validation.Required,
+		),
+		validation.Field(
+			&smr.Rating,
+			validateRatingRule,
+		),
+	)
+}
+
+func (smr *SiteMovieReview) scrape(s *goquery.Selection) error {
+	var (
+		authorSel  = s.Find(reviewAuthorCSS)
+		ratingSel  = s.Find(reviewRatingCSS)
+		titleSel   = s.Find("h4")
+		contentSel = s.Find("article")
+	)
+
+	smr.Author = authorSel.Text()
+	smr.Rating = ratingSel.Text()
+	smr.Title = titleSel.Text()
+	smr.Content = contentSel.Text()
+	return smr.validateScraping()
+}
+
 func (c *Client) scrapeTrendingMoviesData(d *goquery.Document) (*TrendingMoviesData, error) {
 	selection := d.Find(trendingCSS)
 	if selection.Length() == 0 {
@@ -371,4 +422,59 @@ func (c *Client) scrapeMovieDirectorData(r io.Reader) (*MovieDirectorData, error
 	}
 
 	return &MovieDirectorData{*director}, nil
+}
+
+func (c *Client) scrapeMovieReviewsData(r io.Reader) (*MovieReviewsData, error) {
+	document, err := goquery.NewDocumentFromReader(r)
+	if err != nil {
+		debug.Println(err)
+		return nil, err
+	}
+
+	reviewsSel := document.Find(reviewsCSS)
+	if reviewsSel.Length() == 0 {
+		err := fmt.Errorf("no elements found for %q", reviewsCSS)
+		debug.Println(err)
+		return nil, err
+	}
+
+	reviewsMoreSel := document.Find(reviewsMoreCSS)
+	if reviewsMoreSel.Length() == 0 {
+		err := fmt.Errorf("no elements found for %q", reviewsMoreCSS)
+		debug.Println(err)
+		return nil, err
+	}
+
+	reviewsMoreURL, _ := reviewsMoreSel.Attr("href")
+	if err := validation.Validate(reviewsMoreURL, is.URL); err != nil {
+		err := fmt.Errorf(`invalid "href" found for %q`, reviewsMoreCSS)
+		debug.Println(err)
+		return nil, err
+	}
+
+	var (
+		movieReviews = make([]SiteMovieReview, 0)
+		scrapingErrs = make([]error, 0)
+	)
+
+	reviewsSel.Each(func(i int, s *goquery.Selection) {
+		movieReview := SiteMovieReview{}
+		err := movieReview.scrape(s)
+		if err != nil {
+			err = fmt.Errorf("reviews, i=%d, %w", i, err)
+		}
+
+		movieReviews = append(movieReviews, movieReview)
+		scrapingErrs = append(scrapingErrs, err)
+	})
+
+	if err := errors.Join(scrapingErrs...); err != nil {
+		debug.Println(err)
+		return nil, err
+	}
+
+	return &MovieReviewsData{
+		Reviews:         movieReviews,
+		ReviewsMoreLink: reviewsMoreURL,
+	}, nil
 }

@@ -889,7 +889,7 @@ func TestClient_GetMovieDirectorWithContext(t *testing.T) {
 				defer server.Close()
 			}
 
-			c := yts.NewClientWithConfig(&clientCfg)
+			c, _ := yts.NewClientWithConfig(&clientCfg)
 			got, err := c.GetMovieDirectorWithContext(tt.ctx, tt.movieSlug)
 			assertError(t, methodName, err, tt.wantErr)
 			assertEqual(t, methodName, got, tt.want)
