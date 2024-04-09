@@ -41,6 +41,7 @@ var (
 	ErrInvalidClientConfig     = errors.New("invalid_client_config")
 	ErrContentRetrievalFailure = errors.New("content_retrieval_failure")
 	ErrFilterValidationFailure = errors.New("filter_validation_failure")
+	ErrValidationFailure       = errors.New("validation_failure")
 )
 
 func wrapErr(sentinel error, others ...error) error {
@@ -163,7 +164,7 @@ func (c *Client) GetMovieDetailsWithContext(ctx context.Context, movieID int, fi
 ) {
 	if movieID <= 0 {
 		err := fmt.Errorf("provided movieID must be at least 1")
-		return nil, wrapErr(ErrFilterValidationFailure, err)
+		return nil, wrapErr(ErrValidationFailure, err)
 	}
 
 	queryString := fmt.Sprintf("movie_id=%d", movieID)
@@ -201,7 +202,7 @@ func (c *Client) GetMovieSuggestionsWithContext(ctx context.Context, movieID int
 ) {
 	if movieID <= 0 {
 		err := fmt.Errorf("provided movieID must be at least 1")
-		return nil, wrapErr(ErrFilterValidationFailure, err)
+		return nil, wrapErr(ErrValidationFailure, err)
 	}
 
 	var (

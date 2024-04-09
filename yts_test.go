@@ -375,14 +375,14 @@ func TestClient_GetMovieDetailsWithContext(t *testing.T) {
 			clientCfg: yts.DefaultClientConfig(),
 			ctx:       context.Background(),
 			filters:   &yts.MovieDetailsFilters{},
-			wantErr:   yts.ErrFilterValidationFailure,
+			wantErr:   yts.ErrValidationFailure,
 		},
 		{
 			name:      `returns error for negative movieID`,
 			clientCfg: yts.DefaultClientConfig(),
 			ctx:       context.Background(),
 			movieID:   -1,
-			wantErr:   yts.ErrFilterValidationFailure,
+			wantErr:   yts.ErrValidationFailure,
 		},
 		{
 			name:      "returns error when request context times out",
@@ -467,14 +467,14 @@ func TestClient_GetMovieSuggestionsWithContext(t *testing.T) {
 			clientCfg: yts.DefaultClientConfig(),
 			ctx:       context.Background(),
 			movieID:   0,
-			wantErr:   yts.ErrFilterValidationFailure,
+			wantErr:   yts.ErrValidationFailure,
 		},
 		{
 			name:      `returns error for negative movieID`,
 			clientCfg: yts.DefaultClientConfig(),
 			ctx:       context.Background(),
 			movieID:   -1,
-			wantErr:   yts.ErrFilterValidationFailure,
+			wantErr:   yts.ErrValidationFailure,
 		},
 		{
 			name:      "returns error when request context times out",
