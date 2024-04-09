@@ -1,9 +1,11 @@
 package yts
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -430,6 +432,80 @@ func (c *Client) GetMovieCommentsWithContext(ctx context.Context, movieSlug stri
 
 func (c *Client) GetMovieComments(movieSlug string, page int) (*MovieCommentsResponse, error) {
 	return c.GetMovieCommentsWithContext(context.Background(), movieSlug, page)
+}
+
+type MovieAdditionalDetailsData struct {
+	Director SiteMovieDirector  `json:"director"`
+	Comments []SiteMovieComment `json:"comments"`
+	Reviews  []SiteMovieReview  `json:"reviews"`
+}
+
+type MovieAdditionalDetailsResponse struct {
+	Data MovieAdditionalDetailsData `json:"data"`
+}
+
+func (c *Client) GetMovieAdditionalDetailsWithContext(ctx context.Context, movieSlug string) (
+	*MovieAdditionalDetailsResponse, error,
+) {
+	if movieSlug == "" {
+		err := fmt.Errorf("provided movie slug cannot be an empty")
+		return nil, wrapErr(ErrFilterValidationFailure, err)
+	}
+
+	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
+	pageURL, _ := url.Parse(pageURLString)
+	pageCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	response, err := c.newRequestWithContext(pageCtx, pageURL)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		dData, dErr = c.scrapeMovieDirectorData(bytes.NewReader(body))
+		rData, rErr = c.scrapeMovieReviewsData(bytes.NewReader(body))
+		cData, mErr = c.scrapeMovieCommentsMetaData(bytes.NewReader(body))
+	)
+
+	if v := errors.Join(dErr, rErr, mErr); v != nil {
+		debug.Panicln(v)
+		return nil, ErrContentRetrievalFailure
+	}
+
+	commentURLString := c.getCommentsURL(cData.movieID, 0)
+	commentURL, _ := url.Parse(commentURLString)
+	commentCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	response, err = c.newRequestWithContext(commentCtx, commentURL)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+	comments, cErr := c.scrapeMovieComments(response.Body)
+	if cErr != nil {
+		return nil, ErrContentRetrievalFailure
+	}
+
+	data := MovieAdditionalDetailsData{
+		Comments: comments,
+		Director: dData.Director,
+		Reviews:  rData.Reviews,
+	}
+
+	return &MovieAdditionalDetailsResponse{data}, nil
+}
+
+func (c *Client) GetMovieAdditionalDetails(movieSlug string) (*MovieAdditionalDetailsResponse, error) {
+	return c.GetMovieAdditionalDetailsWithContext(context.Background(), movieSlug)
 }
 
 type TorrentMagnets map[Quality]string
