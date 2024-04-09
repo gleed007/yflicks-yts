@@ -78,3 +78,7 @@ func (c *Client) getAPIEndpoint(path, query string) string {
 
 	return fmt.Sprintf("%s?%s", targetURL, query)
 }
+
+func (c *Client) getCommentsURL(movieID, offset int) string {
+	return fmt.Sprintf("%s/ajax/comments/%d?offset=%d", &c.config.SiteURL, movieID, offset)
+}

@@ -463,6 +463,79 @@ func (c *Client) GetMovieReviews(movieSlug string) (*MovieReviewsResponse, error
 	return c.GetMovieReviewsWithContext(context.Background(), movieSlug)
 }
 
+const movieCommentsPerPage = 30
+
+type MovieCommentsData struct {
+	CommentsMore bool               `json:"comments_more"`
+	Comments     []SiteMovieComment `json:"comments"`
+}
+
+type MovieCommentsResponse struct {
+	Data MovieCommentsData `json:"data"`
+}
+
+func (c *Client) GetMovieCommentsWithContext(ctx context.Context, movieSlug string, page int) (
+	*MovieCommentsResponse, error,
+) {
+	if movieSlug == "" {
+		err := fmt.Errorf("provided movie slug cannot be an empty")
+		return nil, wrapErr(ErrFilterValidationFailure, err)
+	}
+
+	if page < 1 {
+		err := fmt.Errorf("provided comment page must be at least 1")
+		return nil, wrapErr(ErrFilterValidationFailure, err)
+	}
+
+	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
+	pageURL, _ := url.Parse(pageURLString)
+	pageCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	response, err := c.newRequestWithContext(pageCtx, pageURL)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+	meta, err := c.scrapeMovieCommentsMetaData(response.Body)
+	if err != nil {
+		return nil, ErrContentRetrievalFailure
+	}
+
+	var (
+		offset = (page - 1) * movieCommentsPerPage
+		isLast = meta.commmentCount-offset <= movieCommentsPerPage
+	)
+
+	commentURLString := c.getCommentsURL(meta.movieID, offset)
+	commentURL, _ := url.Parse(commentURLString)
+	commentCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	response, err = c.newRequestWithContext(commentCtx, commentURL)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+	comments, err := c.scrapeMovieComments(response.Body)
+	if err != nil {
+		return nil, ErrContentRetrievalFailure
+	}
+
+	data := MovieCommentsData{
+		CommentsMore: !isLast,
+		Comments:     comments,
+	}
+
+	return &MovieCommentsResponse{data}, nil
+}
+
+func (c *Client) GetMovieComments(movieSlug string, page int) (*MovieCommentsResponse, error) {
+	return c.GetMovieCommentsWithContext(context.Background(), movieSlug, page)
+}
+
 // A TorrentMagnets is the return type of MagnetLinks method of a `yts.Client`
 type TorrentMagnets map[Quality]string
 
