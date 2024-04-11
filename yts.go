@@ -1,11 +1,9 @@
 package yts
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -414,13 +412,12 @@ func (c *Client) GetMovieDirectorWithContext(ctx context.Context, movieSlug stri
 
 	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
 	pageURL, _ := url.Parse(pageURLString)
-	response, err := c.newRequestWithContext(ctx, pageURL)
+	document, err := c.newDocumentRequestWithContext(ctx, pageURL)
 	if err != nil {
 		return nil, err
 	}
 
-	defer response.Body.Close()
-	data, err := c.scrapeMovieDirectorData(response.Body)
+	data, err := c.scrapeMovieDirectorData(document)
 	if err != nil {
 		return nil, ErrContentRetrievalFailure
 	}
@@ -447,13 +444,12 @@ func (c *Client) GetMovieReviewsWithContext(ctx context.Context, movieSlug strin
 
 	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
 	pageURL, _ := url.Parse(pageURLString)
-	response, err := c.newRequestWithContext(ctx, pageURL)
+	document, err := c.newDocumentRequestWithContext(ctx, pageURL)
 	if err != nil {
 		return nil, err
 	}
 
-	defer response.Body.Close()
-	data, err := c.scrapeMovieReviewsData(response.Body)
+	data, err := c.scrapeMovieReviewsData(document)
 	if err != nil {
 		return nil, ErrContentRetrievalFailure
 	}
@@ -494,13 +490,12 @@ func (c *Client) GetMovieCommentsWithContext(ctx context.Context, movieSlug stri
 	pageCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	response, err := c.newRequestWithContext(pageCtx, pageURL)
+	pageDoc, err := c.newDocumentRequestWithContext(pageCtx, pageURL)
 	if err != nil {
 		return nil, err
 	}
 
-	defer response.Body.Close()
-	meta, err := c.scrapeMovieCommentsMetaData(response.Body)
+	meta, err := c.scrapeMovieCommentsMetaData(pageDoc)
 	if err != nil {
 		return nil, ErrContentRetrievalFailure
 	}
@@ -515,13 +510,12 @@ func (c *Client) GetMovieCommentsWithContext(ctx context.Context, movieSlug stri
 	commentCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	response, err = c.newRequestWithContext(commentCtx, commentURL)
+	commentDoc, err := c.newDocumentRequestWithContext(commentCtx, commentURL)
 	if err != nil {
 		return nil, err
 	}
 
-	defer response.Body.Close()
-	comments, err := c.scrapeMovieComments(response.Body)
+	comments, err := c.scrapeMovieComments(commentDoc)
 	if err != nil {
 		return nil, ErrContentRetrievalFailure
 	}
@@ -561,21 +555,15 @@ func (c *Client) GetMovieAdditionalDetailsWithContext(ctx context.Context, movie
 	pageCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	response, err := c.newRequestWithContext(pageCtx, pageURL)
-	if err != nil {
-		return nil, err
-	}
-
-	defer response.Body.Close()
-	body, err := io.ReadAll(response.Body)
+	pageDocument, err := c.newDocumentRequestWithContext(pageCtx, pageURL)
 	if err != nil {
 		return nil, err
 	}
 
 	var (
-		dData, dErr = c.scrapeMovieDirectorData(bytes.NewReader(body))
-		rData, rErr = c.scrapeMovieReviewsData(bytes.NewReader(body))
-		cData, mErr = c.scrapeMovieCommentsMetaData(bytes.NewReader(body))
+		dData, dErr = c.scrapeMovieDirectorData(pageDocument)
+		rData, rErr = c.scrapeMovieReviewsData(pageDocument)
+		cData, mErr = c.scrapeMovieCommentsMetaData(pageDocument)
 	)
 
 	if v := errors.Join(dErr, rErr, mErr); v != nil {
@@ -588,13 +576,12 @@ func (c *Client) GetMovieAdditionalDetailsWithContext(ctx context.Context, movie
 	commentCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	response, err = c.newRequestWithContext(commentCtx, commentURL)
+	commentDoc, err := c.newDocumentRequestWithContext(commentCtx, commentURL)
 	if err != nil {
 		return nil, err
 	}
 
-	defer response.Body.Close()
-	comments, cErr := c.scrapeMovieComments(response.Body)
+	comments, cErr := c.scrapeMovieComments(commentDoc)
 	if cErr != nil {
 		return nil, ErrContentRetrievalFailure
 	}
