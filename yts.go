@@ -305,7 +305,7 @@ func (c *Client) GetMovieDirectorWithContext(ctx context.Context, movieSlug stri
 ) {
 	if movieSlug == "" {
 		err := fmt.Errorf("provided movie slug cannot be an empty")
-		return nil, wrapErr(ErrFilterValidationFailure, err)
+		return nil, wrapErr(ErrValidationFailure, err)
 	}
 
 	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
@@ -338,7 +338,7 @@ func (c *Client) GetMovieReviewsWithContext(ctx context.Context, movieSlug strin
 ) {
 	if movieSlug == "" {
 		err := fmt.Errorf("provided movie slug cannot be an empty")
-		return nil, wrapErr(ErrFilterValidationFailure, err)
+		return nil, wrapErr(ErrValidationFailure, err)
 	}
 
 	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
@@ -377,12 +377,12 @@ func (c *Client) GetMovieCommentsWithContext(ctx context.Context, movieSlug stri
 ) {
 	if movieSlug == "" {
 		err := fmt.Errorf("provided movie slug cannot be an empty")
-		return nil, wrapErr(ErrFilterValidationFailure, err)
+		return nil, wrapErr(ErrValidationFailure, err)
 	}
 
 	if page < 1 {
 		err := fmt.Errorf("provided comment page must be at least 1")
-		return nil, wrapErr(ErrFilterValidationFailure, err)
+		return nil, wrapErr(ErrValidationFailure, err)
 	}
 
 	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
@@ -449,7 +449,7 @@ func (c *Client) GetMovieAdditionalDetailsWithContext(ctx context.Context, movie
 ) {
 	if movieSlug == "" {
 		err := fmt.Errorf("provided movie slug cannot be an empty")
-		return nil, wrapErr(ErrFilterValidationFailure, err)
+		return nil, wrapErr(ErrValidationFailure, err)
 	}
 
 	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
