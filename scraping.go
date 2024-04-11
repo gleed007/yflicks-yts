@@ -3,7 +3,6 @@ package yts
 import (
 	"errors"
 	"fmt"
-	"io"
 	"regexp"
 	"strconv"
 	"strings"
@@ -460,14 +459,8 @@ func (c *Client) scrapeHomePageContentData(d *goquery.Document) (*HomePageConten
 	return response, nil
 }
 
-func (c *Client) scrapeMovieDirectorData(r io.Reader) (*MovieDirectorData, error) {
-	document, err := goquery.NewDocumentFromReader(r)
-	if err != nil {
-		debug.Println(err)
-		return nil, err
-	}
-
-	directorSel := document.Find(directorCSS)
+func (c *Client) scrapeMovieDirectorData(d *goquery.Document) (*MovieDirectorData, error) {
+	directorSel := d.Find(directorCSS)
 	if directorSel.Length() == 0 {
 		err := fmt.Errorf("no elements found for %q", directorCSS)
 		debug.Println(err)
@@ -483,21 +476,15 @@ func (c *Client) scrapeMovieDirectorData(r io.Reader) (*MovieDirectorData, error
 	return &MovieDirectorData{*director}, nil
 }
 
-func (c *Client) scrapeMovieReviewsData(r io.Reader) (*MovieReviewsData, error) {
-	document, err := goquery.NewDocumentFromReader(r)
-	if err != nil {
-		debug.Println(err)
-		return nil, err
-	}
-
-	reviewsSel := document.Find(reviewsCSS)
+func (c *Client) scrapeMovieReviewsData(d *goquery.Document) (*MovieReviewsData, error) {
+	reviewsSel := d.Find(reviewsCSS)
 	if reviewsSel.Length() == 0 {
 		err := fmt.Errorf("no elements found for %q", reviewsCSS)
 		debug.Println(err)
 		return nil, err
 	}
 
-	reviewsMoreSel := document.Find(reviewsMoreCSS)
+	reviewsMoreSel := d.Find(reviewsMoreCSS)
 	if reviewsMoreSel.Length() == 0 {
 		err := fmt.Errorf("no elements found for %q", reviewsMoreCSS)
 		debug.Println(err)
@@ -543,21 +530,15 @@ type siteMovieCommentsMeta struct {
 	commmentCount int
 }
 
-func (c *Client) scrapeMovieCommentsMetaData(r io.Reader) (*siteMovieCommentsMeta, error) {
-	document, err := goquery.NewDocumentFromReader(r)
-	if err != nil {
-		debug.Println(err)
-		return nil, err
-	}
-
+func (c *Client) scrapeMovieCommentsMetaData(d *goquery.Document) (*siteMovieCommentsMeta, error) {
 	var (
-		commentCountSel = document.Find(commentCountCSS)
-		movieIDSel      = document.Find(movieIDCSS)
+		commentCountSel = d.Find(commentCountCSS)
+		movieIDSel      = d.Find(movieIDCSS)
 	)
 
 	if commentCountSel.Length() == 0 {
-		sErr := fmt.Errorf("no elements found for %q", commentCountCSS)
-		debug.Println(sErr)
+		err := fmt.Errorf("no elements found for %q", commentCountCSS)
+		debug.Println(err)
 		return nil, err
 	}
 
@@ -588,14 +569,8 @@ func (c *Client) scrapeMovieCommentsMetaData(r io.Reader) (*siteMovieCommentsMet
 	}, nil
 }
 
-func (c *Client) scrapeMovieComments(r io.Reader) ([]SiteMovieComment, error) {
-	document, err := goquery.NewDocumentFromReader(r)
-	if err != nil {
-		debug.Println(err)
-		return nil, err
-	}
-
-	commentSel := document.Find(commentCSS)
+func (c *Client) scrapeMovieComments(d *goquery.Document) ([]SiteMovieComment, error) {
+	commentSel := d.Find(commentCSS)
 	if commentSel.Length() == 0 {
 		return []SiteMovieComment{}, nil
 	}
