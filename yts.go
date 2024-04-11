@@ -239,13 +239,12 @@ func (c *Client) GetTrendingMoviesWithContext(ctx context.Context) (
 ) {
 	pageURLString := fmt.Sprintf("%s/trending-movies", &c.config.SiteURL)
 	pageURL, _ := url.Parse(pageURLString)
-	response, err := c.newRequestWithContext(ctx, pageURL)
+	document, err := c.newDocumentRequestWithContext(ctx, pageURL)
 	if err != nil {
 		return nil, err
 	}
 
-	defer response.Body.Close()
-	data, err := c.scrapeTrendingMoviesData(response.Body)
+	data, err := c.scrapeTrendingMoviesData(document)
 	if err != nil {
 		return nil, ErrContentRetrievalFailure
 	}
@@ -270,13 +269,12 @@ type HomePageContentResponse struct {
 func (c *Client) GetHomePageContentWithContext(ctx context.Context) (
 	*HomePageContentResponse, error,
 ) {
-	response, err := c.newRequestWithContext(ctx, &c.config.SiteURL)
+	document, err := c.newDocumentRequestWithContext(ctx, &c.config.SiteURL)
 	if err != nil {
 		return nil, err
 	}
 
-	defer response.Body.Close()
-	data, err := c.scrapeHomePageContentData(response.Body)
+	data, err := c.scrapeHomePageContentData(document)
 	if err != nil {
 		return nil, ErrContentRetrievalFailure
 	}

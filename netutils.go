@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 var ErrUnexpectedHTTPResponseStatus = errors.New(
@@ -46,6 +48,24 @@ func (c *Client) newJSONRequestWithContext(
 	defer response.Body.Close()
 	decoder := json.NewDecoder(response.Body)
 	return decoder.Decode(payload)
+}
+
+func (c *Client) newDocumentRequestWithContext(
+	ctx context.Context, targetURL *url.URL,
+) (*goquery.Document, error) {
+	response, err := c.newRequestWithContext(ctx, targetURL)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+	document, err := goquery.NewDocumentFromReader(response.Body)
+	if err != nil {
+		debug.Println(err)
+		return nil, ErrContentRetrievalFailure
+	}
+
+	return document, nil
 }
 
 func (c *Client) getAPIEndpoint(path, query string) string {

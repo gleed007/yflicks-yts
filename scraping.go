@@ -3,7 +3,6 @@ package yts
 import (
 	"errors"
 	"fmt"
-	"io"
 	"regexp"
 	"strconv"
 	"strings"
@@ -193,14 +192,8 @@ func (sum *SiteUpcomingMovie) scrape(s *goquery.Selection) error {
 	return sum.validateScraping()
 }
 
-func (c *Client) scrapeTrendingMoviesData(r io.Reader) (*TrendingMoviesData, error) {
-	document, err := goquery.NewDocumentFromReader(r)
-	if err != nil {
-		debug.Println(err)
-		return nil, err
-	}
-
-	selection := document.Find(trendingCSS)
+func (c *Client) scrapeTrendingMoviesData(d *goquery.Document) (*TrendingMoviesData, error) {
+	selection := d.Find(trendingCSS)
 	if selection.Length() == 0 {
 		err := fmt.Errorf("no elements found for %q", trendingCSS)
 		debug.Println(err)
@@ -231,17 +224,11 @@ func (c *Client) scrapeTrendingMoviesData(r io.Reader) (*TrendingMoviesData, err
 	return &TrendingMoviesData{trendingMovies}, nil
 }
 
-func (c *Client) scrapeHomePageContentData(r io.Reader) (*HomePageContentData, error) {
-	document, err := goquery.NewDocumentFromReader(r)
-	if err != nil {
-		debug.Println(err)
-		return nil, err
-	}
-
+func (c *Client) scrapeHomePageContentData(d *goquery.Document) (*HomePageContentData, error) {
 	var (
-		popDownloadSel   = document.Find(popularCSS)
-		latestTorrentSel = document.Find(latestCSS)
-		upcomingMovieSel = document.Find(upcomingCSS)
+		popDownloadSel   = d.Find(popularCSS)
+		latestTorrentSel = d.Find(latestCSS)
+		upcomingMovieSel = d.Find(upcomingCSS)
 	)
 
 	if popDownloadSel.Length() == 0 {
