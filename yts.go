@@ -487,10 +487,7 @@ func (c *Client) GetMovieCommentsWithContext(ctx context.Context, movieSlug stri
 
 	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
 	pageURL, _ := url.Parse(pageURLString)
-	pageCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	pageDoc, err := c.newDocumentRequestWithContext(pageCtx, pageURL)
+	pageDoc, err := c.newDocumentRequestWithContext(ctx, pageURL)
 	if err != nil {
 		return nil, err
 	}
@@ -507,10 +504,7 @@ func (c *Client) GetMovieCommentsWithContext(ctx context.Context, movieSlug stri
 
 	commentURLString := c.getCommentsURL(meta.movieID, offset)
 	commentURL, _ := url.Parse(commentURLString)
-	commentCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	commentDoc, err := c.newDocumentRequestWithContext(commentCtx, commentURL)
+	commentDoc, err := c.newDocumentRequestWithContext(ctx, commentURL)
 	if err != nil {
 		return nil, err
 	}
@@ -552,10 +546,7 @@ func (c *Client) GetMovieAdditionalDetailsWithContext(ctx context.Context, movie
 
 	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
 	pageURL, _ := url.Parse(pageURLString)
-	pageCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	pageDocument, err := c.newDocumentRequestWithContext(pageCtx, pageURL)
+	pageDocument, err := c.newDocumentRequestWithContext(ctx, pageURL)
 	if err != nil {
 		return nil, err
 	}
@@ -573,10 +564,7 @@ func (c *Client) GetMovieAdditionalDetailsWithContext(ctx context.Context, movie
 
 	commentURLString := c.getCommentsURL(cData.movieID, 0)
 	commentURL, _ := url.Parse(commentURLString)
-	commentCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	commentDoc, err := c.newDocumentRequestWithContext(commentCtx, commentURL)
+	commentDoc, err := c.newDocumentRequestWithContext(ctx, commentURL)
 	if err != nil {
 		return nil, err
 	}
