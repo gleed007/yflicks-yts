@@ -348,6 +348,28 @@ func (smc *SiteMovieComment) scrape(s *goquery.Selection) error {
 	return smc.validateScraping()
 }
 
+func (c *Client) scrapeMovieID(d *goquery.Document) (int, error) {
+	var (
+		movieIDSel         = d.Find(movieIDCSS)
+		movieIDStr, exists = movieIDSel.Attr("data-movie-id")
+	)
+
+	if !exists {
+		err := fmt.Errorf(`"data-movie-id" attr doesn't exist`)
+		debug.Println(err)
+		return 0, err
+	}
+
+	movieID, err := strconv.Atoi(movieIDStr)
+	if err != nil {
+		sErr := fmt.Errorf("failed to convert movieID, %w", err)
+		debug.Println(sErr)
+		return 0, sErr
+	}
+
+	return movieID, nil
+}
+
 func (c *Client) scrapeTrendingMoviesData(d *goquery.Document) (*TrendingMoviesData, error) {
 	selection := d.Find(trendingCSS)
 	if selection.Length() == 0 {
@@ -531,11 +553,7 @@ type siteMovieCommentsMeta struct {
 }
 
 func (c *Client) scrapeMovieCommentsMetaData(d *goquery.Document) (*siteMovieCommentsMeta, error) {
-	var (
-		commentCountSel = d.Find(commentCountCSS)
-		movieIDSel      = d.Find(movieIDCSS)
-	)
-
+	commentCountSel := d.Find(commentCountCSS)
 	if commentCountSel.Length() == 0 {
 		err := fmt.Errorf("no elements found for %q", commentCountCSS)
 		debug.Println(err)
@@ -549,14 +567,7 @@ func (c *Client) scrapeMovieCommentsMetaData(d *goquery.Document) (*siteMovieCom
 		return nil, err
 	}
 
-	movieIDStr, exists := movieIDSel.Attr("data-movie-id")
-	if !exists {
-		sErr := fmt.Errorf(`"data-movie-id" attr doesn't exist`)
-		debug.Println(sErr)
-		return nil, err
-	}
-
-	movieID, err := strconv.Atoi(movieIDStr)
+	movieID, err := c.scrapeMovieID(d)
 	if err != nil {
 		sErr := fmt.Errorf("failed to convert movieID, %w", err)
 		debug.Println(sErr)

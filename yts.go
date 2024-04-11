@@ -226,6 +226,31 @@ func (c *Client) MovieSuggestions(movieID int) (*MovieSuggestionsResponse, error
 	return c.MovieSuggestionsWithContext(context.Background(), movieID)
 }
 
+func (c *Client) ResolveMovieSlugToIDWithContext(ctx context.Context, movieSlug string) (int, error) {
+	if movieSlug == "" {
+		err := fmt.Errorf("provided movie slug cannot be an empty")
+		return 0, wrapErr(ErrValidationFailure, err)
+	}
+
+	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
+	pageURL, _ := url.Parse(pageURLString)
+	document, err := c.newDocumentRequestWithContext(ctx, pageURL)
+	if err != nil {
+		return 0, err
+	}
+
+	movieID, err := c.scrapeMovieID(document)
+	if err != nil {
+		return 0, ErrContentRetrievalFailure
+	}
+
+	return movieID, nil
+}
+
+func (c *Client) ResolveMovieSlugToID(movieSlug string) (int, error) {
+	return c.ResolveMovieSlugToIDWithContext(context.Background(), movieSlug)
+}
+
 type TrendingMoviesData struct {
 	Movies []SiteMovie `json:"movies"`
 }
