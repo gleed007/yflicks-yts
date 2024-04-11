@@ -828,7 +828,7 @@ func TestClient_GetMovieDirectorWithContext(t *testing.T) {
 			clientCfg: yts.DefaultClientConfig(),
 			ctx:       context.Background(),
 			movieSlug: "",
-			wantErr:   yts.ErrFilterValidationFailure,
+			wantErr:   yts.ErrValidationFailure,
 		},
 		{
 			name:       "returns error when director selector is missing",
