@@ -792,6 +792,70 @@ func TestClient_HomePageContentWithContext(t *testing.T) {
 	}
 }
 
+func TestClient_ResolveMovieSlugToIDWithContext(t *testing.T) {
+	const (
+		methodName  = "Client.ResolveMovieSlugtoID"
+		testdataDir = "resolve_movie_slug"
+		movieID     = 3175
+		movieSlug   = "the-dark-knight-2008"
+		pattern     = "/movies/the-dark-knight-2008"
+	)
+
+	tests := []struct {
+		name       string
+		handlerCfg testHTTPHandlerConfig
+		clientCfg  yts.ClientConfig
+		ctx        context.Context
+		movieSlug  string
+		want       int
+		wantErr    error
+	}{
+		{
+			name:       "resolves movie slug to ID successfully when available",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "ok_response.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  "the-dark-knight-2008",
+			want:       movieID,
+		},
+		{
+			name:       "returns error when required selector is not available",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "missing_selector.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  "the-dark-knight-2008",
+			want:       0,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error if fails to pass available movie ID",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "invalid_id.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  "the-dark-knight-2008",
+			want:       0,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clientCfg := tt.clientCfg
+			if tt.handlerCfg.pattern != "" {
+				server := createTestServer(t, tt.handlerCfg)
+				serverURL, _ := url.Parse(server.URL)
+				clientCfg.SiteURL = *serverURL
+				defer server.Close()
+			}
+
+			c := yts.NewClientWithConfig(&clientCfg)
+			got, err := c.ResolveMovieSlugToIDWithContext(tt.ctx, tt.movieSlug)
+			assertError(t, methodName, err, tt.wantErr)
+			assertEqual(t, methodName, got, tt.want)
+		})
+	}
+}
+
 func TestClient_GetMovieDirectorWithContext(t *testing.T) {
 	const (
 		methodName  = "Client.GetMovieDirector"
