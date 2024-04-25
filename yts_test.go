@@ -848,7 +848,7 @@ func TestClient_ResolveMovieSlugToIDWithContext(t *testing.T) {
 				defer server.Close()
 			}
 
-			c := yts.NewClientWithConfig(&clientCfg)
+			c, _ := yts.NewClientWithConfig(&clientCfg)
 			got, err := c.ResolveMovieSlugToIDWithContext(tt.ctx, tt.movieSlug)
 			assertError(t, methodName, err, tt.wantErr)
 			assertEqual(t, methodName, got, tt.want)
