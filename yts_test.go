@@ -307,7 +307,7 @@ func TestClient_SearchMoviesWithContext(t *testing.T) {
 			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "ok_response.json"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
-			filters:    yts.DefaultSearchMoviesFilter(queryTerm),
+			filters:    yts.DefaultSearchMoviesFilters(queryTerm),
 			want:       mockedOKResponse,
 		},
 		{

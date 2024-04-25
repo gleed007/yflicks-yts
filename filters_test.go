@@ -6,9 +6,9 @@ import (
 	yts "github.com/atifcppprogrammer/yflicks-yts"
 )
 
-func TestDefaultSearchMoviesFilter(t *testing.T) {
+func TestDefaultSearchMoviesFilters(t *testing.T) {
 	const queryTerm = "Oppenheimer (2023)"
-	got := yts.DefaultSearchMoviesFilter(queryTerm)
+	got := yts.DefaultSearchMoviesFilters(queryTerm)
 	want := &yts.SearchMoviesFilters{
 		Limit:         20,
 		Page:          1,
