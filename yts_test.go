@@ -56,7 +56,6 @@ func TestDefaultClientConfig(t *testing.T) {
 	want := yts.ClientConfig{
 		APIBaseURL:      *parsedAPIBaseURL,
 		SiteURL:         *parsedSiteURL,
-		SiteDomain:      yts.DefaultSiteDomain,
 		RequestTimeout:  time.Minute,
 		TorrentTrackers: yts.DefaultTorrentTrackers(),
 		Debug:           false,
@@ -827,7 +826,7 @@ func TestClient_GetMagnetLinks(t *testing.T) {
 			"%s+[%s]+[%s]",
 			infoGetter.GetTorrentInfo().MovieTitle,
 			torrent.Quality,
-			strings.ToUpper(config.SiteDomain),
+			strings.ToUpper(config.SiteURL.Host),
 		)
 
 		return fmt.Sprintf(

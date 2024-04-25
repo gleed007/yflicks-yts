@@ -13,7 +13,6 @@ import (
 const (
 	DefaultAPIBaseURL = "https://yts.mx/api/v2"
 	DefaultSiteURL    = "https://yts.mx"
-	DefaultSiteDomain = "yts.mx"
 )
 
 const (
@@ -26,7 +25,6 @@ var debug = newLogger()
 type ClientConfig struct {
 	APIBaseURL      url.URL
 	SiteURL         url.URL
-	SiteDomain      string
 	TorrentTrackers []string
 	RequestTimeout  time.Duration
 	Debug           bool
@@ -70,7 +68,6 @@ func DefaultClientConfig() ClientConfig {
 	return ClientConfig{
 		APIBaseURL:      *parsedAPIBaseURL,
 		SiteURL:         *parsedSiteURL,
-		SiteDomain:      DefaultSiteDomain,
 		RequestTimeout:  time.Minute,
 		TorrentTrackers: DefaultTorrentTrackers(),
 		Debug:           false,
@@ -299,7 +296,7 @@ func (c *Client) GetMagnetLinks(t TorrentInfoGetter) TorrentMagnets {
 			"%s+[%s]+[%s]",
 			t.GetTorrentInfo().MovieTitle,
 			torrent.Quality,
-			strings.ToUpper(c.config.SiteDomain),
+			strings.ToUpper(c.config.SiteURL.Host),
 		)
 
 		return fmt.Sprintf(
