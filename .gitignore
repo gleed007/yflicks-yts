@@ -1,1 +1,2 @@
-/dist
+# storing local golang version for asdf-golang plugin
+.tool-versions
