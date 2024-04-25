@@ -69,53 +69,45 @@ func TestNewClientWithConfig(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		clientCfg *yts.ClientConfig
+		clientCfg yts.ClientConfig
 		wantErr   error
-		wantPanic bool
 	}{
 		{
-			name:      fmt.Sprintf(`panic() if config request timeout < %d`, yts.TimeoutLimitLower),
-			clientCfg: &yts.ClientConfig{RequestTimeout: time.Second},
+			name:      fmt.Sprintf(`returns error if config request timeout < %d`, yts.TimeoutLimitLower),
+			clientCfg: yts.ClientConfig{RequestTimeout: time.Second},
 			wantErr:   yts.ErrInvalidClientConfig,
-			wantPanic: true,
 		},
 		{
-			name:      fmt.Sprintf(`panic() if config request timeout > %d`, yts.TimeoutLimitUpper),
-			clientCfg: &yts.ClientConfig{RequestTimeout: time.Hour},
+			name:      fmt.Sprintf(`returns error if config request timeout > %d`, yts.TimeoutLimitUpper),
+			clientCfg: yts.ClientConfig{RequestTimeout: time.Hour},
 			wantErr:   yts.ErrInvalidClientConfig,
-			wantPanic: true,
 		},
 		{
-			name:      "no panic() if valid client config provided",
-			clientCfg: &yts.ClientConfig{RequestTimeout: time.Minute},
-			wantPanic: false,
+			name:      "returns nil error if valid client config provided",
+			clientCfg: yts.ClientConfig{RequestTimeout: time.Minute},
+			wantErr:   nil,
+		},
+		{
+			name:      "returns nil error if default client config provided",
+			clientCfg: yts.DefaultClientConfig(),
+			wantErr:   nil,
 		},
 	}
 	for _, tt := range tests {
+		clientCfg := tt.clientCfg
 		t.Run(tt.name, func(t *testing.T) {
-			defer func() {
-				recovered := recover()
-				if !tt.wantPanic && recovered == nil {
-					return
-				}
-				if !tt.wantPanic && recovered != nil {
-					t.Errorf("%s() unexpected panic with value %v", methodName, recovered)
-					return
-				}
-				if err, _ := recovered.(error); !errors.Is(err, tt.wantErr) {
-					t.Errorf("%s() unexpected panic with error = %v, wantErr %v", methodName, err, tt.wantErr)
-					return
-				}
-			}()
-			yts.NewClientWithConfig(tt.clientCfg)
+			_, err := yts.NewClientWithConfig(&clientCfg)
+			assertError(t, methodName, err, tt.wantErr)
 		})
 	}
 }
 
 func TestNewClient(t *testing.T) {
-	defaultConfig := yts.DefaultClientConfig()
-	got := yts.NewClient()
-	want := yts.NewClientWithConfig(&defaultConfig)
+	var (
+		defaultConfig = yts.DefaultClientConfig()
+		got           = yts.NewClient()
+		want, _       = yts.NewClientWithConfig(&defaultConfig)
+	)
 	assertEqual(t, "NewClient", got, want)
 }
 
@@ -329,7 +321,7 @@ func TestClient_SearchMoviesWithContext(t *testing.T) {
 				defer server.Close()
 			}
 
-			c := yts.NewClientWithConfig(&clientCfg)
+			c, _ := yts.NewClientWithConfig(&clientCfg)
 			got, err := c.SearchMoviesWithContext(tt.ctx, tt.filters)
 			assertError(t, methodName, err, tt.wantErr)
 			assertEqual(t, methodName, got, tt.want)
@@ -420,7 +412,7 @@ func TestClient_GetMovieDetailsWithContext(t *testing.T) {
 				defer server.Close()
 			}
 
-			c := yts.NewClientWithConfig(&clientCfg)
+			c, _ := yts.NewClientWithConfig(&clientCfg)
 			got, err := c.GetMovieDetailsWithContext(tt.ctx, tt.movieID, tt.filters)
 			assertError(t, methodName, err, tt.wantErr)
 			assertEqual(t, methodName, got, tt.want)
@@ -509,7 +501,7 @@ func TestClient_GetMovieSuggestionsWithContext(t *testing.T) {
 				defer server.Close()
 			}
 
-			c := yts.NewClientWithConfig(&clientCfg)
+			c, _ := yts.NewClientWithConfig(&clientCfg)
 			got, err := c.GetMovieSuggestionsWithContext(tt.ctx, tt.movieID)
 			assertError(t, methodName, err, tt.wantErr)
 			assertEqual(t, methodName, got, tt.want)
@@ -640,7 +632,7 @@ func TestClient_GetTrendingMoviesWithContext(t *testing.T) {
 				defer server.Close()
 			}
 
-			c := yts.NewClientWithConfig(&clientCfg)
+			c, _ := yts.NewClientWithConfig(&clientCfg)
 			got, err := c.GetTrendingMoviesWithContext(tt.ctx)
 			assertError(t, methodName, err, tt.wantErr)
 			assertEqual(t, methodName, got, tt.want)
@@ -792,7 +784,7 @@ func TestClient_GetHomePageContentWithContext(t *testing.T) {
 				defer server.Close()
 			}
 
-			c := yts.NewClientWithConfig(&clientCfg)
+			c, _ := yts.NewClientWithConfig(&clientCfg)
 			got, err := c.GetHomePageContentWithContext(tt.ctx)
 			assertError(t, methodName, err, tt.wantErr)
 			assertEqual(t, methodName, got, tt.want)
@@ -802,9 +794,9 @@ func TestClient_GetHomePageContentWithContext(t *testing.T) {
 
 func TestClient_GetMagnetLinks(t *testing.T) {
 	var (
-		config   = yts.DefaultClientConfig()
-		client   = yts.NewClientWithConfig(&config)
-		trackers = url.Values{}
+		config    = yts.DefaultClientConfig()
+		client, _ = yts.NewClientWithConfig(&config)
+		trackers  = url.Values{}
 	)
 
 	for _, tracker := range config.TorrentTrackers {

@@ -74,14 +74,14 @@ func DefaultClientConfig() ClientConfig {
 	}
 }
 
-func NewClientWithConfig(config *ClientConfig) *Client {
+func NewClientWithConfig(config *ClientConfig) (*Client, error) {
 	if config.RequestTimeout < TimeoutLimitLower {
 		err := fmt.Errorf(
 			"request timeout must be >= %s, you provided %q",
 			TimeoutLimitLower,
 			config.RequestTimeout,
 		)
-		panic(wrapErr(ErrInvalidClientConfig, err))
+		return nil, wrapErr(ErrInvalidClientConfig, err)
 	}
 
 	if TimeoutLimitUpper < config.RequestTimeout {
@@ -90,7 +90,7 @@ func NewClientWithConfig(config *ClientConfig) *Client {
 			TimeoutLimitUpper,
 			config.RequestTimeout,
 		)
-		panic(wrapErr(ErrInvalidClientConfig, err))
+		return nil, wrapErr(ErrInvalidClientConfig, err)
 	}
 
 	if config.Debug {
@@ -98,12 +98,15 @@ func NewClientWithConfig(config *ClientConfig) *Client {
 	}
 
 	netClient := &http.Client{Timeout: config.RequestTimeout}
-	return &Client{*config, netClient}
+	return &Client{*config, netClient}, nil
 }
 
 func NewClient() *Client {
-	defaultConfig := DefaultClientConfig()
-	return NewClientWithConfig(&defaultConfig)
+	var (
+		defaultConfig = DefaultClientConfig()
+		client, _     = NewClientWithConfig(&defaultConfig)
+	)
+	return client
 }
 
 type SearchMoviesData struct {
