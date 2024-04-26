@@ -11,13 +11,15 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
+// ErrUnexpectedHTTPResponseStatus indicates that a `yts.Client` method made a
+// network call which had response code outside of the range (200-299).
 var ErrUnexpectedHTTPResponseStatus = errors.New(
 	"unexpected_http_response_status",
 )
 
-func (c *Client) newRequestWithContext(ctx context.Context, targetURL *url.URL) (
-	*http.Response, error,
-) {
+func (c *Client) newRequestWithContext(
+	ctx context.Context, targetURL *url.URL,
+) (*http.Response, error) {
 	targetURLString := targetURL.String()
 	request, err := http.NewRequestWithContext(ctx, "GET", targetURLString, http.NoBody)
 	if err != nil {

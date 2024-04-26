@@ -1,5 +1,11 @@
 package yts
 
+// A Meta represents the meta information provided as part of the response of the
+// following YTS API endpoints.
+//
+// - "/api/v2/list_movies.json"
+// - "/api/v2/movie_details.json"
+// - "/api/v2/movie_suggestions.json"
 type Meta struct {
 	ServerTime     int    `json:"server_time"`
 	ServerTimezone string `json:"server_timezone"`
@@ -7,6 +13,12 @@ type Meta struct {
 	ExecutionTime  string `json:"execution_time"`
 }
 
+// A Cast represents the cast information provided as part of the response of the
+// following YTS API endpoints.
+//
+// - "/api/v2/list_movies.json"
+// - "/api/v2/movie_details.json"
+// - "/api/v2/movie_suggestions.json"
 type Cast struct {
 	Name          string `json:"name"`
 	CharacterName string `json:"character_name"`
@@ -14,6 +26,12 @@ type Cast struct {
 	URLSmallImage string `json:"url_small_image"`
 }
 
+// A Torrent represents the torrent information provided as part of the response of
+// the following YTS API endpoints.
+//
+// - "/api/v2/list_movies.json"
+// - "/api/v2/movie_details.json"
+// - "/api/v2/movie_suggestions.json"
 type Torrent struct {
 	URL              string  `json:"url"`
 	Hash             string  `json:"hash"`
@@ -31,15 +49,26 @@ type Torrent struct {
 	DateUploadedUnix int     `json:"date_uploaded_unix"`
 }
 
+// A TorrentInfo serves no grander purpose than a *TorrentInfo being the return type
+// of the GetTorrentInfo method of the TorrrentInfoGetter interface.
 type TorrentInfo struct {
 	MovieTitle string
 	Torrents   []Torrent
 }
 
+// A TorrentInfoGetter serves essentially serves as a union type and is implemented
+// by the MoviePartial type so that instances of both Movie and MovieDetails can be
+// provided as inputs to the MagnetLinks method of a yts.Client
 type TorrentInfoGetter interface {
 	GetTorrentInfo() *TorrentInfo
 }
 
+// A MoviePartial represents the common movie information provided as part of the
+// response of the following YTS API endpoints.
+//
+// - "/api/v2/list_movies.json"
+// - "/api/v2/movie_details.json"
+// - "/api/v2/movie_suggestions.json"
 type MoviePartial struct {
 	ID                      int       `json:"id"`
 	URL                     string    `json:"url"`
@@ -70,6 +99,11 @@ func (mp *MoviePartial) GetTorrentInfo() *TorrentInfo {
 	return &TorrentInfo{mp.TitleLong, mp.Torrents}
 }
 
+// A Movie represents the movie information provided as part of the response of the
+// following YTS API endpoints.
+//
+// - "/api/v2/list_movies.json"
+// - "/api/v2/movie_suggestions.json"
 type Movie struct {
 	MoviePartial
 	Summary  string `json:"summary"`
@@ -77,6 +111,10 @@ type Movie struct {
 	State    string `json:"state"`
 }
 
+// A MoviePartial represents the movie information provided as part of the response
+// of the following YTS API endpoints.
+//
+// - "/api/v2/movie_details.json"
 type MovieDetails struct {
 	MoviePartial
 	LikeCount              int    `json:"like_count"`

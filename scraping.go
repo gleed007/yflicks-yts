@@ -28,6 +28,8 @@ const (
 	movieGenreCSS    = "div.browse-movie-wrap h4:not([class='rating'])"
 )
 
+// The SiteMovieBase type contains all the information required by both the
+// and SiteMovieUpcoming types.
 type SiteMovieBase struct {
 	Title  string  `json:"title"`
 	Year   int     `json:"year"`
@@ -105,6 +107,11 @@ func (smb *SiteMovieBase) scrape(s *goquery.Selection) error {
 	return smb.validateScraping()
 }
 
+// A SiteMovie instance represents all the information provided for each "movie card"
+// show on the following pages of the YTS website.
+//
+// - The popular and latest movie sections on the home page of the YTS website.
+// - The trending movies shown on the YTS website.
 type SiteMovie struct {
 	SiteMovieBase
 	Rating string `json:"rating"`
@@ -142,6 +149,8 @@ func (sm *SiteMovie) scrape(s *goquery.Selection) error {
 	return sm.validateScraping()
 }
 
+// A SiteUpcomingMovie instance represents all the information provided for each
+// "movie card" on the upcoming section on the home page of the YTS website.
 type SiteUpcomingMovie struct {
 	SiteMovieBase
 	Progress int     `json:"progress"`
