@@ -31,5 +31,5 @@ func TestDefaultMovieDetailsFilters(t *testing.T) {
 		WithCast:   true,
 	}
 
-	assertEqual(t, "DefaultMovieDetalsFilters", got, want)
+	assertEqual(t, "DefaultMovieDetailsFilters", got, want)
 }

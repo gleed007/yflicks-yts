@@ -7,6 +7,8 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
+// Represents all possible values for the "genre" query param for the
+// "/api/list_movies.json" endpoint.
 type Genre string
 
 const (
@@ -39,6 +41,8 @@ const (
 	GenreWestern     Genre = "Western"
 )
 
+// Represents all possible values for the "quality" query param for the
+// "/api/list_movies.json" endpoint.
 type Quality string
 
 const (
@@ -51,6 +55,8 @@ const (
 	Quality3D        Quality = "3D"
 )
 
+// Represents all possible values for the "sort_by" query param for the
+// "/api/list_movies.json" endpoint.
 type SortBy string
 
 const (
@@ -64,6 +70,8 @@ const (
 	SortByDateAdded     SortBy = "date_added"
 )
 
+// Represents all possible values for the "order_by" query param for the
+// "/api/list_movies.json" endpoint.
 type OrderBy string
 
 const (
@@ -111,6 +119,9 @@ var validateQualityRule = validation.In(
 	Quality3D,
 )
 
+// A SearchMoviesFilters represents the complete set of filters (query params) that
+// can be provided for the "/api/v2/list_movies.json" endpoint of the YTS API
+// (https://yts.mx/api#list_movies).
 type SearchMoviesFilters struct {
 	Limit         int     `json:"limit"`
 	Page          int     `json:"page"`
@@ -123,6 +134,8 @@ type SearchMoviesFilters struct {
 	WithRTRatings bool    `json:"with_rt_ratings"`
 }
 
+// DefaultSearchMoviesFilters returns the default *SearchMoviesFilters for the given
+// search term as presented in the YTS documentation (https://yts.mx/api#list_movies).
 func DefaultSearchMoviesFilters(query string) *SearchMoviesFilters {
 	const (
 		defaultPageLimit     = 20
@@ -248,11 +261,17 @@ func (f *SearchMoviesFilters) getQueryString() (string, error) {
 	return queryValues.Encode(), nil
 }
 
+// A MovieDetailsFilters represents the complete set of filters (query params) that
+// can be provided for the "/api/v2/movie_details.json" endpoint of the YTS API
+// (https://yts.mx/api#movie_details).
 type MovieDetailsFilters struct {
 	WithImages bool `json:"with_images"`
 	WithCast   bool `json:"with_cast"`
 }
 
+// DefaultMovieDetailsFilters returns the default *MovieDetailsFilters, unlike the
+// YTS documentation (https://yts.mx/api#movie_details), we set "with_images" and
+// "with_cast" to true.
 func DefaultMovieDetailsFilters() *MovieDetailsFilters {
 	return &MovieDetailsFilters{
 		WithImages: true,

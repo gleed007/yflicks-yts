@@ -609,7 +609,7 @@ func TestClient_TrendingMoviesWithContext(t *testing.T) {
 		},
 		{
 			name:       "returns error when response status is outside 2.x.x range",
-			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "non_existant.html"),
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "non_existent.html"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
 			wantErr:    yts.ErrUnexpectedHTTPResponseStatus,
@@ -761,7 +761,7 @@ func TestClient_HomePageContentWithContext(t *testing.T) {
 		},
 		{
 			name:       "returns error when response status is outside 2.x.x range",
-			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "non_existant.html"),
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "non_existent.html"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
 			wantErr:    yts.ErrUnexpectedHTTPResponseStatus,
