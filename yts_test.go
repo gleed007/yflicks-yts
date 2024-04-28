@@ -333,7 +333,7 @@ func TestClient_MovieDetailsWithContext(t *testing.T) {
 	const (
 		movieID     = 57427
 		methodName  = "Client.MovieDetails"
-		testdataDir = "get_movie_details"
+		testdataDir = "movie_details"
 		pattern     = "movie_details.json"
 	)
 
@@ -424,7 +424,7 @@ func TestClient_MovieSuggestionsWithContext(t *testing.T) {
 	const (
 		movieID     = 57427
 		methodName  = "Client.MovieSuggestions"
-		testdataDir = "get_movie_suggestions"
+		testdataDir = "movie_suggestions"
 		pattern     = "movie_suggestions.json"
 	)
 
@@ -512,7 +512,7 @@ func TestClient_MovieSuggestionsWithContext(t *testing.T) {
 func TestClient_TrendingMoviesWithContext(t *testing.T) {
 	const (
 		methodName  = "Client.TrendingMovies"
-		testdataDir = "get_trending_movies"
+		testdataDir = "trending_movies"
 		pattern     = "/"
 	)
 
@@ -643,7 +643,7 @@ func TestClient_TrendingMoviesWithContext(t *testing.T) {
 func TestClient_HomePageContentWithContext(t *testing.T) {
 	const (
 		methodName  = "Client.HomePageContent"
-		testdataDir = "get_homepage_content"
+		testdataDir = "homepage_content"
 		pattern     = "/"
 	)
 
