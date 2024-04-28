@@ -1,5 +1,22 @@
 # Changelog
 
+<a name="v0.9.7"></a>
+## [v0.9.7](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.9.6...v0.9.7) (2024-04-29)
+
+### Fix
+
+* removed `Get` prefix from public methods for more idiomatic names
+* return error instead of calling panic for `NewClientWithConfig`
+
+### Refactor
+
+* `*goquery.Document` instance is now available in client methods
+
+### Pull Requests
+
+* Merge pull request [#18](https://github.com/atifcppprogrammer/yflicks-yts/issues/18) from atifcppprogrammer/docs/package-documentation
+
+
 <a name="v0.9.6"></a>
 ## [v0.9.6](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.9.5...v0.9.6) (2024-03-25)
 
