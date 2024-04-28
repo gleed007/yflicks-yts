@@ -159,7 +159,7 @@ type MovieDetailsResponse struct {
 	Data MovieDetailsData `json:"data"`
 }
 
-func (c *Client) GetMovieDetailsWithContext(ctx context.Context, movieID int, filters *MovieDetailsFilters) (
+func (c *Client) MovieDetailsWithContext(ctx context.Context, movieID int, filters *MovieDetailsFilters) (
 	*MovieDetailsResponse, error,
 ) {
 	if movieID <= 0 {
@@ -183,8 +183,8 @@ func (c *Client) GetMovieDetailsWithContext(ctx context.Context, movieID int, fi
 	return parsedPayload, nil
 }
 
-func (c *Client) GetMovieDetails(movieID int, filters *MovieDetailsFilters) (*MovieDetailsResponse, error) {
-	return c.GetMovieDetailsWithContext(context.Background(), movieID, filters)
+func (c *Client) MovieDetails(movieID int, filters *MovieDetailsFilters) (*MovieDetailsResponse, error) {
+	return c.MovieDetailsWithContext(context.Background(), movieID, filters)
 }
 
 type MovieSuggestionsData struct {
@@ -197,7 +197,7 @@ type MovieSuggestionsResponse struct {
 	Data MovieSuggestionsData `json:"data"`
 }
 
-func (c *Client) GetMovieSuggestionsWithContext(ctx context.Context, movieID int) (
+func (c *Client) MovieSuggestionsWithContext(ctx context.Context, movieID int) (
 	*MovieSuggestionsResponse, error,
 ) {
 	if movieID <= 0 {
@@ -222,8 +222,8 @@ func (c *Client) GetMovieSuggestionsWithContext(ctx context.Context, movieID int
 	return parsedPayload, nil
 }
 
-func (c *Client) GetMovieSuggestions(movieID int) (*MovieSuggestionsResponse, error) {
-	return c.GetMovieSuggestionsWithContext(context.Background(), movieID)
+func (c *Client) MovieSuggestions(movieID int) (*MovieSuggestionsResponse, error) {
+	return c.MovieSuggestionsWithContext(context.Background(), movieID)
 }
 
 type TrendingMoviesData struct {
@@ -234,7 +234,7 @@ type TrendingMoviesResponse struct {
 	Data TrendingMoviesData `json:"data"`
 }
 
-func (c *Client) GetTrendingMoviesWithContext(ctx context.Context) (
+func (c *Client) TrendingMoviesWithContext(ctx context.Context) (
 	*TrendingMoviesResponse, error,
 ) {
 	pageURLString := fmt.Sprintf("%s/trending-movies", &c.config.SiteURL)
@@ -252,8 +252,8 @@ func (c *Client) GetTrendingMoviesWithContext(ctx context.Context) (
 	return &TrendingMoviesResponse{*data}, nil
 }
 
-func (c *Client) GetTrendingMovies() (*TrendingMoviesResponse, error) {
-	return c.GetTrendingMoviesWithContext(context.Background())
+func (c *Client) TrendingMovies() (*TrendingMoviesResponse, error) {
+	return c.TrendingMoviesWithContext(context.Background())
 }
 
 type HomePageContentData struct {
@@ -266,7 +266,7 @@ type HomePageContentResponse struct {
 	Data HomePageContentData `json:"data"`
 }
 
-func (c *Client) GetHomePageContentWithContext(ctx context.Context) (
+func (c *Client) HomePageContentWithContext(ctx context.Context) (
 	*HomePageContentResponse, error,
 ) {
 	document, err := c.newDocumentRequestWithContext(ctx, &c.config.SiteURL)
@@ -282,13 +282,13 @@ func (c *Client) GetHomePageContentWithContext(ctx context.Context) (
 	return &HomePageContentResponse{*data}, nil
 }
 
-func (c *Client) GetHomePageContent() (*HomePageContentResponse, error) {
-	return c.GetHomePageContentWithContext(context.Background())
+func (c *Client) HomePageContent() (*HomePageContentResponse, error) {
+	return c.HomePageContentWithContext(context.Background())
 }
 
 type TorrentMagnets map[Quality]string
 
-func (c *Client) GetMagnetLinks(t TorrentInfoGetter) TorrentMagnets {
+func (c *Client) MagnetLinks(t TorrentInfoGetter) TorrentMagnets {
 	var trackers = url.Values{}
 	for _, tracker := range c.config.TorrentTrackers {
 		trackers.Add("tr", tracker)

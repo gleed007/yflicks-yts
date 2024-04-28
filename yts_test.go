@@ -329,10 +329,10 @@ func TestClient_SearchMoviesWithContext(t *testing.T) {
 	}
 }
 
-func TestClient_GetMovieDetailsWithContext(t *testing.T) {
+func TestClient_MovieDetailsWithContext(t *testing.T) {
 	const (
 		movieID     = 57427
-		methodName  = "Client.GetMovieDetails"
+		methodName  = "Client.MovieDetails"
 		testdataDir = "get_movie_details"
 		pattern     = "movie_details.json"
 	)
@@ -413,17 +413,17 @@ func TestClient_GetMovieDetailsWithContext(t *testing.T) {
 			}
 
 			c, _ := yts.NewClientWithConfig(&clientCfg)
-			got, err := c.GetMovieDetailsWithContext(tt.ctx, tt.movieID, tt.filters)
+			got, err := c.MovieDetailsWithContext(tt.ctx, tt.movieID, tt.filters)
 			assertError(t, methodName, err, tt.wantErr)
 			assertEqual(t, methodName, got, tt.want)
 		})
 	}
 }
 
-func TestClient_GetMovieSuggestionsWithContext(t *testing.T) {
+func TestClient_MovieSuggestionsWithContext(t *testing.T) {
 	const (
 		movieID     = 57427
-		methodName  = "Client.GetMovieSuggestions"
+		methodName  = "Client.MovieSuggestions"
 		testdataDir = "get_movie_suggestions"
 		pattern     = "movie_suggestions.json"
 	)
@@ -502,16 +502,16 @@ func TestClient_GetMovieSuggestionsWithContext(t *testing.T) {
 			}
 
 			c, _ := yts.NewClientWithConfig(&clientCfg)
-			got, err := c.GetMovieSuggestionsWithContext(tt.ctx, tt.movieID)
+			got, err := c.MovieSuggestionsWithContext(tt.ctx, tt.movieID)
 			assertError(t, methodName, err, tt.wantErr)
 			assertEqual(t, methodName, got, tt.want)
 		})
 	}
 }
 
-func TestClient_GetTrendingMoviesWithContext(t *testing.T) {
+func TestClient_TrendingMoviesWithContext(t *testing.T) {
 	const (
-		methodName  = "Client.GetTrendingMovies"
+		methodName  = "Client.TrendingMovies"
 		testdataDir = "get_trending_movies"
 		pattern     = "/"
 	)
@@ -633,16 +633,16 @@ func TestClient_GetTrendingMoviesWithContext(t *testing.T) {
 			}
 
 			c, _ := yts.NewClientWithConfig(&clientCfg)
-			got, err := c.GetTrendingMoviesWithContext(tt.ctx)
+			got, err := c.TrendingMoviesWithContext(tt.ctx)
 			assertError(t, methodName, err, tt.wantErr)
 			assertEqual(t, methodName, got, tt.want)
 		})
 	}
 }
 
-func TestClient_GetHomePageContentWithContext(t *testing.T) {
+func TestClient_HomePageContentWithContext(t *testing.T) {
 	const (
-		methodName  = "Client.GetHomePageContent"
+		methodName  = "Client.HomePageContent"
 		testdataDir = "get_homepage_content"
 		pattern     = "/"
 	)
@@ -785,14 +785,14 @@ func TestClient_GetHomePageContentWithContext(t *testing.T) {
 			}
 
 			c, _ := yts.NewClientWithConfig(&clientCfg)
-			got, err := c.GetHomePageContentWithContext(tt.ctx)
+			got, err := c.HomePageContentWithContext(tt.ctx)
 			assertError(t, methodName, err, tt.wantErr)
 			assertEqual(t, methodName, got, tt.want)
 		})
 	}
 }
 
-func TestClient_GetMagnetLinks(t *testing.T) {
+func TestClient_MagnetLinks(t *testing.T) {
 	var (
 		config    = yts.DefaultClientConfig()
 		client, _ = yts.NewClientWithConfig(&config)
@@ -835,6 +835,6 @@ func TestClient_GetMagnetLinks(t *testing.T) {
 		want[torrents[i].Quality] = getMagnetFor(torrents[i])
 	}
 
-	got := client.GetMagnetLinks(&infoGetter)
-	assertEqual(t, "Client.GetMagnetLinks", got, want)
+	got := client.MagnetLinks(&infoGetter)
+	assertEqual(t, "Client.MagnetLinks", got, want)
 }
