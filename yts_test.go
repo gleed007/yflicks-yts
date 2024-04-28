@@ -859,7 +859,7 @@ func TestClient_ResolveMovieSlugToIDWithContext(t *testing.T) {
 func TestClient_MovieDirectorWithContext(t *testing.T) {
 	const (
 		methodName  = "Client.MovieDirector"
-		testdataDir = "get_movie_director"
+		testdataDir = "movie_director"
 		movieSlug   = "road-house-1989"
 		pattern     = "/movies/road-house-1989"
 	)
