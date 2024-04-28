@@ -1,4 +1,4 @@
-# yflicks-yts
+# yflicks-yts &middot; ![GitHub Tag](https://img.shields.io/github/v/tag/atifcppprogrammer/yflicks-yts) [![LICENSE](https://img.shields.io/badge/license-MIT-red)](https://github.com/gozeloglu/cache/blob/main/LICENSE) [![Go Report Card](https://goreportcard.com/badge/github.com/atifcppprogrammer/yflicks-yts)](https://goreportcard.com/report/github.com/atifcppprogrammer/yflicks-yts) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/atifcppprogrammer/yflicks-yts/makefile-test.yml?label=tests)
 
 yflicks-yts is a client library for [YTS](https://yts.mx), it is developed keeping
 the needs of the [yflicks](https://github.com/atifcppprogrammer/yflicks) desktop
