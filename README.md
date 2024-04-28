@@ -18,7 +18,7 @@ following.
 1. [GNU Make](https://www.gnu.org/software/make/)
 2. Golang version __`1.21.5`__
 
-We recommend using the [asdf](https://github.com/asdf-vm/asdf) version mangager and
+We recommend using the [asdf](https://github.com/asdf-vm/asdf) version manager and
 the corresponding Golang [plugin](https://github.com/asdf-community/asdf-golang) for
 managing your installation 👍.
 

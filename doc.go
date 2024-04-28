@@ -33,7 +33,7 @@ be done in the following manner.
 	client, err := NewClientWithConfig(&config)
 
 In most situations however it is prudent to use the default configuration and then
-modifing it to suit your needs.
+modifying it to suit your needs.
 
 	config := DefaultClientConfig()
 	config.Debug = true
