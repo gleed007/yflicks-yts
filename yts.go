@@ -319,11 +319,11 @@ type MovieDirectorResponse struct {
 	Data MovieDirectorData `json:"data"`
 }
 
-func (c *Client) GetMovieDirector(movieSlug string) (*MovieDirectorResponse, error) {
-	return c.GetMovieDirectorWithContext(context.Background(), movieSlug)
+func (c *Client) MovieDirector(movieSlug string) (*MovieDirectorResponse, error) {
+	return c.MovieDirectorWithContext(context.Background(), movieSlug)
 }
 
-func (c *Client) GetMovieDirectorWithContext(ctx context.Context, movieSlug string) (
+func (c *Client) MovieDirectorWithContext(ctx context.Context, movieSlug string) (
 	*MovieDirectorResponse, error,
 ) {
 	if movieSlug == "" {
@@ -355,7 +355,7 @@ type MovieReviewsResponse struct {
 	Data MovieReviewsData `json:"data"`
 }
 
-func (c *Client) GetMovieReviewsWithContext(ctx context.Context, movieSlug string) (
+func (c *Client) MovieReviewsWithContext(ctx context.Context, movieSlug string) (
 	*MovieReviewsResponse, error,
 ) {
 	if movieSlug == "" {
@@ -378,8 +378,8 @@ func (c *Client) GetMovieReviewsWithContext(ctx context.Context, movieSlug strin
 	return &MovieReviewsResponse{*data}, nil
 }
 
-func (c *Client) GetMovieReviews(movieSlug string) (*MovieReviewsResponse, error) {
-	return c.GetMovieReviewsWithContext(context.Background(), movieSlug)
+func (c *Client) MovieReviews(movieSlug string) (*MovieReviewsResponse, error) {
+	return c.MovieReviewsWithContext(context.Background(), movieSlug)
 }
 
 const movieCommentsPerPage = 30
@@ -393,7 +393,7 @@ type MovieCommentsResponse struct {
 	Data MovieCommentsData `json:"data"`
 }
 
-func (c *Client) GetMovieCommentsWithContext(ctx context.Context, movieSlug string, page int) (
+func (c *Client) MovieCommentsWithContext(ctx context.Context, movieSlug string, page int) (
 	*MovieCommentsResponse, error,
 ) {
 	if movieSlug == "" {
@@ -443,8 +443,8 @@ func (c *Client) GetMovieCommentsWithContext(ctx context.Context, movieSlug stri
 	return &MovieCommentsResponse{data}, nil
 }
 
-func (c *Client) GetMovieComments(movieSlug string, page int) (*MovieCommentsResponse, error) {
-	return c.GetMovieCommentsWithContext(context.Background(), movieSlug, page)
+func (c *Client) MovieComments(movieSlug string, page int) (*MovieCommentsResponse, error) {
+	return c.MovieCommentsWithContext(context.Background(), movieSlug, page)
 }
 
 type MovieAdditionalDetailsData struct {
@@ -457,7 +457,7 @@ type MovieAdditionalDetailsResponse struct {
 	Data MovieAdditionalDetailsData `json:"data"`
 }
 
-func (c *Client) GetMovieAdditionalDetailsWithContext(ctx context.Context, movieSlug string) (
+func (c *Client) MovieAdditionalDetailsWithContext(ctx context.Context, movieSlug string) (
 	*MovieAdditionalDetailsResponse, error,
 ) {
 	if movieSlug == "" {
@@ -504,8 +504,8 @@ func (c *Client) GetMovieAdditionalDetailsWithContext(ctx context.Context, movie
 	return &MovieAdditionalDetailsResponse{data}, nil
 }
 
-func (c *Client) GetMovieAdditionalDetails(movieSlug string) (*MovieAdditionalDetailsResponse, error) {
-	return c.GetMovieAdditionalDetailsWithContext(context.Background(), movieSlug)
+func (c *Client) MovieAdditionalDetails(movieSlug string) (*MovieAdditionalDetailsResponse, error) {
+	return c.MovieAdditionalDetailsWithContext(context.Background(), movieSlug)
 }
 
 type TorrentMagnets map[Quality]string

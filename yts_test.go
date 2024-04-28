@@ -856,9 +856,9 @@ func TestClient_ResolveMovieSlugToIDWithContext(t *testing.T) {
 	}
 }
 
-func TestClient_GetMovieDirectorWithContext(t *testing.T) {
+func TestClient_MovieDirectorWithContext(t *testing.T) {
 	const (
-		methodName  = "Client.GetMovieDirector"
+		methodName  = "Client.MovieDirector"
 		testdataDir = "get_movie_director"
 		movieSlug   = "road-house-1989"
 		pattern     = "/movies/road-house-1989"
@@ -954,7 +954,7 @@ func TestClient_GetMovieDirectorWithContext(t *testing.T) {
 			}
 
 			c, _ := yts.NewClientWithConfig(&clientCfg)
-			got, err := c.GetMovieDirectorWithContext(tt.ctx, tt.movieSlug)
+			got, err := c.MovieDirectorWithContext(tt.ctx, tt.movieSlug)
 			assertError(t, methodName, err, tt.wantErr)
 			assertEqual(t, methodName, got, tt.want)
 		})
