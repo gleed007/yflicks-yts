@@ -1,4 +1,4 @@
-# yflicks-yts &middot; ![GitHub Tag](https://img.shields.io/github/v/tag/atifcppprogrammer/yflicks-yts) [![LICENSE](https://img.shields.io/badge/license-MIT-red)](https://github.com/atifcppprogrammer/yflicks-yts/blob/master/LICENSE) [![Go Report Card](https://goreportcard.com/badge/github.com/atifcppprogrammer/yflicks-yts)](https://goreportcard.com/report/github.com/atifcppprogrammer/yflicks-yts) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/atifcppprogrammer/yflicks-yts/makefile-test.yml?label=tests)
+# yflicks-yts &middot; ![GitHub Tag](https://img.shields.io/github/v/tag/atifcppprogrammer/yflicks-yts) [![Go Reference](https://pkg.go.dev/badge/github.com/atifcppprogrammer/yflicks-yts.svg)](https://pkg.go.dev/github.com/atifcppprogrammer/yflicks-yts) [![LICENSE](https://img.shields.io/badge/license-MIT-red)](https://github.com/atifcppprogrammer/yflicks-yts/blob/master/LICENSE) [![Go Report Card](https://goreportcard.com/badge/github.com/atifcppprogrammer/yflicks-yts)](https://goreportcard.com/report/github.com/atifcppprogrammer/yflicks-yts) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/atifcppprogrammer/yflicks-yts/makefile-test.yml?label=tests)
 
 yflicks-yts is a client library for [YTS](https://yts.mx), it is developed keeping
 the needs of the [yflicks](https://github.com/atifcppprogrammer/yflicks) desktop
@@ -21,7 +21,7 @@ following.
 We recommend using the [asdf](https://github.com/asdf-vm/asdf) version manager and
 the corresponding Golang [plugin](https://github.com/asdf-community/asdf-golang) for
 managing your installation 👍. Once you have cloned this repository, please run 
-__`make`__ in the root of this repository. This will among other things perform the
+`make` in the root of this repository. This will among other things perform the
 following _important_ tasks.
 
 1. Install [golangci-lint](https://github.com/golangci/golangci-lint)
