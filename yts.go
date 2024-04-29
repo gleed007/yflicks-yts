@@ -38,16 +38,20 @@ type ClientConfig struct {
 	// The base URL for the YTS API used by *yts.Client methods, you will likely never
 	// have to specify a value for this other than DefaultAPIBaseURL
 	APIBaseURL url.URL
+
 	// The base URL for the YTS website used by *yts.Client methods, you will likely
 	// never have to specify a value for this other than DefaultSiteURL
 	SiteURL url.URL
+
 	// The list of torrent tracker URLs used by the `MagnetLinks()` method for
 	// preparing magnet links for movie torrents.
 	TorrentTrackers []string
+
 	// The timeout duration after which a http request will be cancelled by a client
 	// method, this value is passed to the internal *http.Client instance used by the
 	// *yts.Client.
 	RequestTimeout time.Duration
+
 	// This flag "switches on" an internal logger and is intended for use by developers
 	// for debugging purposes, if you encounter a bug in this package turning this flag
 	// on will reveal greater detail regarding the error in question.
