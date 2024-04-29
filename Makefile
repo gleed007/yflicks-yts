@@ -1,4 +1,4 @@
-.PHONY: setup setup_devdeps test test_coverage build release format
+.PHONY: setup setup_devdeps test test_coverage run_example build release format
 
 setup: setup_devdeps
 	@go mod download
@@ -23,6 +23,9 @@ ifdef save
 else
 	@go tool cover -html="c.out" && rm c.out
 endif
+
+run_example:
+	@go run ./example
 
 publish:
 ifdef version
