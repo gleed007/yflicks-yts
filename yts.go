@@ -348,9 +348,9 @@ func (c *Client) TrendingMovies() (*TrendingMoviesResponse, error) {
 }
 
 type HomePageContentData struct {
-	Popular  []SiteMovie
-	Latest   []SiteMovie
-	Upcoming []SiteUpcomingMovie
+	Popular  []SiteMovie         `json:"popular"`
+	Latest   []SiteMovie         `json:"latest"`
+	Upcoming []SiteUpcomingMovie `json:"upcoming"`
 }
 
 // A HomePageContentResponse holds the content retrieved by scraping the /trending
