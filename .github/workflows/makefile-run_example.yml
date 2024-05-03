@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feature/example-program-completion
+      - testing
   pull_request:
 
 permissions:
