@@ -134,19 +134,22 @@ func handlerConfigWithStatusCode(t *testing.T, pattern string, statusCode int) t
 	}
 }
 
-func createTestServer(t *testing.T, config testHTTPHandlerConfig) *httptest.Server {
+func createTestServer(t *testing.T, configs ...testHTTPHandlerConfig) *httptest.Server {
 	t.Helper()
 	serveMux := &http.ServeMux{}
-	serveMux.HandleFunc(config.pattern, func(w http.ResponseWriter, r *http.Request) {
-		switch config.statusCode {
-		case http.StatusOK:
-			mockPath := path.Join("testdata", config.filename)
-			http.ServeFile(w, r, mockPath)
-		default:
-			w.WriteHeader(config.statusCode)
-			fmt.Fprintf(w, "status_code: %d", config.statusCode)
-		}
-	})
+	for _, config := range configs {
+		cfg := config
+		serveMux.HandleFunc(cfg.pattern, func(w http.ResponseWriter, r *http.Request) {
+			switch cfg.statusCode {
+			case http.StatusOK:
+				mockPath := path.Join("testdata", cfg.filename)
+				http.ServeFile(w, r, mockPath)
+			default:
+				w.WriteHeader(cfg.statusCode)
+				fmt.Fprintf(w, "status_code: %d", cfg.statusCode)
+			}
+		})
+	}
 	return httptest.NewServer(serveMux)
 }
 
