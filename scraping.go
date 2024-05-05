@@ -285,6 +285,7 @@ func (smr *SiteMovieReview) validateScraping() error {
 		validation.Field(
 			&smr.Rating,
 			validateRatingRule,
+			validation.Required,
 		),
 	)
 }
@@ -297,10 +298,10 @@ func (smr *SiteMovieReview) scrape(s *goquery.Selection) error {
 		contentSel = s.Find("article")
 	)
 
-	smr.Author = authorSel.Text()
-	smr.Rating = ratingSel.Text()
-	smr.Title = titleSel.Text()
-	smr.Content = contentSel.Text()
+	smr.Author = cleanString(authorSel.Text())
+	smr.Rating = cleanString(ratingSel.Text())
+	smr.Title = cleanString(titleSel.Text())
+	smr.Content = cleanString(contentSel.Text())
 	return smr.validateScraping()
 }
 
