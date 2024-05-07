@@ -1127,6 +1127,219 @@ func TestClient_MoviesReviewsWithContext(t *testing.T) {
 	}
 }
 
+func TestClient_MovieCommentsWithContext(t *testing.T) {
+	const (
+		methodName           = "Client.MovieComments"
+		testdataDir          = "movie_comments"
+		movieSlug            = "oppenheimer-2023"
+		commentsPattern      = "ajax/comments/57427"
+		commentsCountPattern = "movies/oppenheimer-2023"
+	)
+
+	timedoutCtx, cancel := context.WithDeadline(
+		context.Background(), time.Now(),
+	)
+
+	defer cancel()
+
+	getHandlerCfgsFor := func(subDir string) []testHTTPHandlerConfig {
+		testdataSubDir := fmt.Sprintf("%s/%s", testdataDir, subDir)
+		return []testHTTPHandlerConfig{
+			defaultHandlerConfig(t, commentsPattern, testdataSubDir, "comments.html"),
+			defaultHandlerConfig(t, commentsCountPattern, testdataSubDir, "comments_count.html"),
+		}
+	}
+
+	getMockedResponse := func(more bool) yts.MovieCommentsResponse {
+		return yts.MovieCommentsResponse{
+			Data: yts.MovieCommentsData{
+				CommentsMore: more,
+				Comments: []yts.SiteMovieComment{
+					{
+						Author:    "aaron2023",
+						AvatarURL: "https://img.yts.mx/assets/images/users/thumb/default_avatar.jpg",
+						Timestamp: "April 30, 2024 at 09:46 am",
+						Content:   "content-one",
+						LikeCount: 0,
+					},
+					{
+						Author:    "AmanS666",
+						AvatarURL: "https://img.yts.mx/assets/images/users/thumb/default_avatar.jpg",
+						Timestamp: "January 29, 2024 at 09:13 am",
+						Content:   "content-two",
+						LikeCount: 1,
+					},
+					{
+						Author:    "zorg2",
+						AvatarURL: "https://img.yts.mx/assets/images/users/thumb/default_avatar.jpg",
+						Timestamp: "January 19, 2024 at 10:44 am",
+						Content:   "content-three",
+						LikeCount: 0,
+					},
+				},
+			},
+		}
+	}
+
+	var (
+		mockedOKResponseMore = getMockedResponse(true)
+		mockedOKResponse     = getMockedResponse(false)
+	)
+
+	tests := []struct {
+		name         string
+		handlerCfgs  []testHTTPHandlerConfig
+		clientCfg    yts.ClientConfig
+		ctx          context.Context
+		movieSlug    string
+		commentsPage int
+		want         *yts.MovieCommentsResponse
+		wantErr      error
+	}{
+		{
+			name:         "returns error when movie slug is an empty string",
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    "",
+			commentsPage: 1,
+			wantErr:      yts.ErrValidationFailure,
+		},
+		{
+			name:         "returns error when comments page is less than 1",
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 0,
+			wantErr:      yts.ErrValidationFailure,
+		},
+		{
+			name:         "returns error when movie page is missing movie ID attribute",
+			handlerCfgs:  getHandlerCfgsFor("missing_movie_id"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when movie page has invalid movie ID attribute value",
+			handlerCfgs:  getHandlerCfgsFor("invalid_movie_id"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when movie page is missing comment count",
+			handlerCfgs:  getHandlerCfgsFor("missing_comment_count"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when movie page has invalid movie comment count",
+			handlerCfgs:  getHandlerCfgsFor("invalid_comment_count"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when any movie comment has a missing author",
+			handlerCfgs:  getHandlerCfgsFor("missing_author"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when any movie comment has a missing avatar URL",
+			handlerCfgs:  getHandlerCfgsFor("missing_avatar_url"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when any movie comment has an invalid avatar URL",
+			handlerCfgs:  getHandlerCfgsFor("invalid_avatar_url"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when any movie comment has a missing timestamp",
+			handlerCfgs:  getHandlerCfgsFor("missing_timestamp"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when any movie comment has missing content",
+			handlerCfgs:  getHandlerCfgsFor("missing_content"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when request context times out",
+			handlerCfgs:  getHandlerCfgsFor("ok_response"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          timedoutCtx,
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      context.DeadlineExceeded,
+		},
+		{
+			name:         "returns mocked ok response when scraping succeeds",
+			handlerCfgs:  getHandlerCfgsFor("ok_response"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			want:         &mockedOKResponse,
+		},
+		{
+			name:         `returns with "CommentMore" true when more comments left`,
+			handlerCfgs:  getHandlerCfgsFor("ok_response_more"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			want:         &mockedOKResponseMore,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clientCfg := tt.clientCfg
+			if len(tt.handlerCfgs) > 0 {
+				server := createTestServer(t, tt.handlerCfgs...)
+				serverURL, _ := url.Parse(server.URL)
+				clientCfg.SiteURL = *serverURL
+				defer server.Close()
+			}
+
+			c, _ := yts.NewClientWithConfig(&clientCfg)
+			got, err := c.MovieCommentsWithContext(tt.ctx, tt.movieSlug, tt.commentsPage)
+			assertError(t, methodName, err, tt.wantErr)
+			assertEqual(t, methodName, got, tt.want)
+		})
+	}
+}
+
 func TestClient_MagnetLinks(t *testing.T) {
 	var (
 		config    = yts.DefaultClientConfig()
