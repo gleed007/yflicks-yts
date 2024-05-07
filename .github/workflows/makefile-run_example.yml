@@ -1,8 +1,7 @@
 name: makefile-test
 on:
   push:
-    branches:
-      - feature/example-program-completion
+    branches: 
       - testing
   pull_request:
 
