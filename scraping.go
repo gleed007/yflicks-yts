@@ -346,8 +346,9 @@ func (smc *SiteMovieComment) scrape(s *goquery.Selection) error {
 	)
 
 	var (
-		timestampStr = timestampSel.Contents().Nodes[1].Data
-		likeCountStr = cleanString(likeCountSel.Text())
+		timestampeNodes = timestampSel.Contents().Nodes
+		timestampStr    = timestampeNodes[len(timestampeNodes)-1].Data
+		likeCountStr    = cleanString(likeCountSel.Text())
 	)
 
 	smc.Author = cleanString(authorSel.Text())
@@ -570,7 +571,8 @@ func (c *Client) scrapeMovieCommentsMetaData(d *goquery.Document) (*siteMovieCom
 		return nil, err
 	}
 
-	commentCount, err := strconv.Atoi(commentCountSel.Text())
+	commentCountText := cleanString(commentCountSel.Text())
+	commentCount, err := strconv.Atoi(commentCountText)
 	if err != nil {
 		sErr := fmt.Errorf("failed to convert comment count, %w", err)
 		debug.Println(sErr)
