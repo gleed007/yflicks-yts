@@ -552,9 +552,10 @@ func (c *Client) MovieComments(movieSlug string, page int) (*MovieCommentsRespon
 }
 
 type MovieAdditionalDetailsData struct {
-	Director SiteMovieDirector  `json:"director"`
-	Comments []SiteMovieComment `json:"comments"`
-	Reviews  []SiteMovieReview  `json:"reviews"`
+	Director        SiteMovieDirector  `json:"director"`
+	Comments        []SiteMovieComment `json:"comments"`
+	Reviews         []SiteMovieReview  `json:"reviews"`
+	ReviewsMoreLink string             `json:"reviews_more_link"`
 }
 
 type MovieAdditionalDetailsResponse struct {
@@ -600,9 +601,10 @@ func (c *Client) MovieAdditionalDetailsWithContext(ctx context.Context, movieSlu
 	}
 
 	data := MovieAdditionalDetailsData{
-		Comments: comments,
-		Director: dData.Director,
-		Reviews:  rData.Reviews,
+		Comments:        comments,
+		Director:        dData.Director,
+		Reviews:         rData.Reviews,
+		ReviewsMoreLink: rData.ReviewsMoreLink,
 	}
 
 	return &MovieAdditionalDetailsResponse{data}, nil
