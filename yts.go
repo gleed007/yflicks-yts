@@ -584,7 +584,7 @@ func (c *Client) MovieAdditionalDetailsWithContext(ctx context.Context, movieSlu
 	)
 
 	if v := errors.Join(dErr, rErr, mErr); v != nil {
-		debug.Panicln(v)
+		debug.Println(v)
 		return nil, ErrContentRetrievalFailure
 	}
 
