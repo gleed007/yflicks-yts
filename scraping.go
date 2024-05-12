@@ -255,7 +255,7 @@ func (smd *SiteMovieDirector) scrape(s *goquery.Selection) error {
 		thumbImgSel = s.Find(directorThumbCSS)
 	)
 
-	smd.Name = nameSel.Text()
+	smd.Name = cleanString(nameSel.Text())
 	smd.URLSmallImage, _ = thumbImgSel.Attr("src")
 	return smd.validateScraping()
 }
