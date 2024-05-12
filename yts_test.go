@@ -931,7 +931,7 @@ func TestClient_MovieDirectorWithContext(t *testing.T) {
 		},
 		{
 			name:       "returns error when response status is outside 2.x.x range",
-			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "non_existant.html"),
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "non_existent.html"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
 			movieSlug:  movieSlug,
@@ -1093,7 +1093,7 @@ func TestClient_MoviesReviewsWithContext(t *testing.T) {
 		},
 		{
 			name:       "returns error when response status is outside 2.x.x range",
-			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "non_existant.html"),
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "non_existent.html"),
 			clientCfg:  yts.DefaultClientConfig(),
 			ctx:        context.Background(),
 			movieSlug:  movieSlug,

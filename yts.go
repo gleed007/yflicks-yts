@@ -524,7 +524,7 @@ func (c *Client) MovieCommentsWithContext(ctx context.Context, movieSlug string,
 
 	var (
 		offset = (page - 1) * movieCommentsPerPage
-		isLast = meta.commmentCount-offset <= movieCommentsPerPage
+		isLast = meta.commentCount-offset <= movieCommentsPerPage
 	)
 
 	commentURLString := c.getCommentsURL(meta.movieID, offset)

@@ -559,8 +559,8 @@ func (c *Client) scrapeMovieReviewsData(d *goquery.Document) (*MovieReviewsData,
 }
 
 type siteMovieCommentsMeta struct {
-	movieID       int
-	commmentCount int
+	movieID      int
+	commentCount int
 }
 
 func (c *Client) scrapeMovieCommentsMetaData(d *goquery.Document) (*siteMovieCommentsMeta, error) {
@@ -587,8 +587,8 @@ func (c *Client) scrapeMovieCommentsMetaData(d *goquery.Document) (*siteMovieCom
 	}
 
 	return &siteMovieCommentsMeta{
-		movieID:       movieID,
-		commmentCount: commentCount,
+		movieID:      movieID,
+		commentCount: commentCount,
 	}, nil
 }
 
