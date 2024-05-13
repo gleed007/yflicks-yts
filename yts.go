@@ -313,6 +313,10 @@ func (c *Client) MovieSuggestions(movieID int) (*MovieSuggestionsResponse, error
 	return c.MovieSuggestionsWithContext(context.Background(), movieID)
 }
 
+// ResolveMovieSlugToIDWithContext is the same as the ResolveMovieSlugToID method
+// but requires a context.Context argument to be passed, this context is then
+// passed to the http.NewRequestWithContext call used for making the network
+// request.
 func (c *Client) ResolveMovieSlugToIDWithContext(ctx context.Context, movieSlug string) (int, error) {
 	if movieSlug == "" {
 		err := fmt.Errorf("provided movie slug cannot be an empty")
@@ -334,6 +338,8 @@ func (c *Client) ResolveMovieSlugToIDWithContext(ctx context.Context, movieSlug 
 	return movieID, nil
 }
 
+// ResolveMovieSlugToID method converts the provided movie slug to its corresponding
+// ID in the YTS movie database.
 func (c *Client) ResolveMovieSlugToID(movieSlug string) (int, error) {
 	return c.ResolveMovieSlugToIDWithContext(context.Background(), movieSlug)
 }
@@ -419,14 +425,22 @@ type MovieDirectorData struct {
 	Director SiteMovieDirector `json:"director"`
 }
 
+// MovieDirectorResponse holds data corresponding to the director of a movie
+// the director information being the thumbnail URL and the name of the
+// director.
 type MovieDirectorResponse struct {
 	Data MovieDirectorData `json:"data"`
 }
 
+// MovieDirector method fetches the director of the movie whose slug has been
+// provided as argument to this method.
 func (c *Client) MovieDirector(movieSlug string) (*MovieDirectorResponse, error) {
 	return c.MovieDirectorWithContext(context.Background(), movieSlug)
 }
 
+// MovieDirectorWithContext is the same as the MovieDirector method but
+// requires a context.Context argument to be passed, this context is then passed to
+// the http.NewRequestWithContext call used for making the network request.
 func (c *Client) MovieDirectorWithContext(ctx context.Context, movieSlug string) (
 	*MovieDirectorResponse, error,
 ) {
@@ -455,10 +469,14 @@ type MovieReviewsData struct {
 	ReviewsMoreLink string            `json:"reviews_more_link"`
 }
 
+// A MovieReviewsResponse contains reviews available for a movie on its YTS page.
 type MovieReviewsResponse struct {
 	Data MovieReviewsData `json:"data"`
 }
 
+// MovieReviewsWithContext is the same as the MovieReviews method but requires a
+// context.Context argument to be passed, this context is then passed to the
+// http.NewRequestWithContext call used for making the network request.
 func (c *Client) MovieReviewsWithContext(ctx context.Context, movieSlug string) (
 	*MovieReviewsResponse, error,
 ) {
@@ -482,6 +500,8 @@ func (c *Client) MovieReviewsWithContext(ctx context.Context, movieSlug string) 
 	return &MovieReviewsResponse{*data}, nil
 }
 
+// MovieReviews method fetches the movie page corresponding to the provided movie
+// slug and scrapes the movie reviews contained therein.
 func (c *Client) MovieReviews(movieSlug string) (*MovieReviewsResponse, error) {
 	return c.MovieReviewsWithContext(context.Background(), movieSlug)
 }
@@ -493,10 +513,15 @@ type MovieCommentsData struct {
 	Comments     []SiteMovieComment `json:"comments"`
 }
 
+// A MovieCommentsResponse contains the comments return by the following endpoint
+// /ajax/comments/{movie_id}?offset={offset} for a movie.
 type MovieCommentsResponse struct {
 	Data MovieCommentsData `json:"data"`
 }
 
+// MovieCommentsWithContext is the same as the MovieComments method but requires a
+// context.Context argument to be passed, this context is then passed to the
+// http.NewRequestWithContext call used for making the network request.
 func (c *Client) MovieCommentsWithContext(ctx context.Context, movieSlug string, page int) (
 	*MovieCommentsResponse, error,
 ) {
@@ -547,6 +572,9 @@ func (c *Client) MovieCommentsWithContext(ctx context.Context, movieSlug string,
 	return &MovieCommentsResponse{data}, nil
 }
 
+// MovieComments method fetches the comments for the provided movie slug, the method
+// first resolves the movie slug to its id and then uses the following endpoint to
+// fetch and scrape comments/ajax/comments/{movie_id}?offset={offset} for the movie.
 func (c *Client) MovieComments(movieSlug string, page int) (*MovieCommentsResponse, error) {
 	return c.MovieCommentsWithContext(context.Background(), movieSlug, page)
 }
@@ -558,10 +586,15 @@ type MovieAdditionalDetailsData struct {
 	ReviewsMoreLink string             `json:"reviews_more_link"`
 }
 
+// A MovieAdditionalDetailsResponse contains the movie directory, reviews and
+// the initial comments available on the movie page.
 type MovieAdditionalDetailsResponse struct {
 	Data MovieAdditionalDetailsData `json:"data"`
 }
 
+// MovieAdditionalDetailsWithContext is the same as the MovieAdditionalDetails
+// method but requires a context.Context argument to be passed, this context is then
+// passed to the http.NewRequestWithContext call used for making the network request.
 func (c *Client) MovieAdditionalDetailsWithContext(ctx context.Context, movieSlug string) (
 	*MovieAdditionalDetailsResponse, error,
 ) {
@@ -610,6 +643,9 @@ func (c *Client) MovieAdditionalDetailsWithContext(ctx context.Context, movieSlu
 	return &MovieAdditionalDetailsResponse{data}, nil
 }
 
+// MovieAdditionalDetails client method fetches the movie page for the provided
+// movie slug and scrapes the director, reviews and initial comments provided on
+// the movie page.
 func (c *Client) MovieAdditionalDetails(movieSlug string) (*MovieAdditionalDetailsResponse, error) {
 	return c.MovieAdditionalDetailsWithContext(context.Background(), movieSlug)
 }

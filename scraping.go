@@ -229,6 +229,8 @@ func (sum *SiteUpcomingMovie) scrape(s *goquery.Selection) error {
 	return sum.validateScraping()
 }
 
+// A SiteMovieDirector instance contains the corresponding name and thumbnail image
+// URL for a movie director as show on a YTS movie page.
 type SiteMovieDirector struct {
 	Name          string `json:"name"`
 	URLSmallImage string `json:"url_small_image"`
@@ -260,6 +262,8 @@ func (smd *SiteMovieDirector) scrape(s *goquery.Selection) error {
 	return smd.validateScraping()
 }
 
+// A SiteMovieReview instance contains all the visible information for a movie 
+// review as shown on a YTS movie page.
 type SiteMovieReview struct {
 	Author  string `json:"author"`
 	Title   string `json:"title"`
@@ -305,6 +309,8 @@ func (smr *SiteMovieReview) scrape(s *goquery.Selection) error {
 	return smr.validateScraping()
 }
 
+// A SiteMovieComment instance contains all the visible information for a movie 
+// comment as shown on a YTS movie page.
 type SiteMovieComment struct {
 	Author    string `json:"author"`
 	AvatarURL string `json:"avatar_url"`
