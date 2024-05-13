@@ -1,5 +1,35 @@
 # Changelog
 
+<a name="v0.10.0"></a>
+## [v0.10.0](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.9.7...v0.10.0) (2024-05-13)
+
+### Feat
+
+* `MovieAdditionalDetailsData` should include link to more reviews
+* **client:** created method for resolving movie slug to movie id
+* **client:** created method for scraping movie additional details
+* **client:** created method for scraping movie comments
+* **client:** created method for scraping movie reviews
+* **client:** created method for scraping movie director
+
+### Fix
+
+* clean movie director name before assignment
+* error should be logged not paniced here
+* fixed scraping implementation for movie comment
+* clean movie review attribute strings before assignment
+* removed `Get` prefix from new public methods for more idiomatic names
+* correct target URL for license badge
+
+### Refactor
+
+* `*goquery.Document` instance is now available in new scraping methods
+
+### Pull Requests
+
+* Merge pull request [#21](https://github.com/atifcppprogrammer/yflicks-yts/issues/21) from atifcppprogrammer/feature/site-scrape
+
+
 <a name="v0.9.7"></a>
 ## [v0.9.7](https://github.com/atifcppprogrammer/yflicks-yts/compare/v0.9.6...v0.9.7) (2024-04-29)
 
