@@ -262,7 +262,7 @@ func (smd *SiteMovieDirector) scrape(s *goquery.Selection) error {
 	return smd.validateScraping()
 }
 
-// A SiteMovieReview instance contains all the visible information for a movie 
+// A SiteMovieReview instance contains all the visible information for a movie
 // review as shown on a YTS movie page.
 type SiteMovieReview struct {
 	Author  string `json:"author"`
@@ -309,7 +309,7 @@ func (smr *SiteMovieReview) scrape(s *goquery.Selection) error {
 	return smr.validateScraping()
 }
 
-// A SiteMovieComment instance contains all the visible information for a movie 
+// A SiteMovieComment instance contains all the visible information for a movie
 // comment as shown on a YTS movie page.
 type SiteMovieComment struct {
 	Author    string `json:"author"`
