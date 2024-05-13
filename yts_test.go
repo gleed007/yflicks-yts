@@ -134,19 +134,22 @@ func handlerConfigWithStatusCode(t *testing.T, pattern string, statusCode int) t
 	}
 }
 
-func createTestServer(t *testing.T, config testHTTPHandlerConfig) *httptest.Server {
+func createTestServer(t *testing.T, configs ...testHTTPHandlerConfig) *httptest.Server {
 	t.Helper()
 	serveMux := &http.ServeMux{}
-	serveMux.HandleFunc(config.pattern, func(w http.ResponseWriter, r *http.Request) {
-		switch config.statusCode {
-		case http.StatusOK:
-			mockPath := path.Join("testdata", config.filename)
-			http.ServeFile(w, r, mockPath)
-		default:
-			w.WriteHeader(config.statusCode)
-			fmt.Fprintf(w, "status_code: %d", config.statusCode)
-		}
-	})
+	for _, config := range configs {
+		cfg := config
+		serveMux.HandleFunc(cfg.pattern, func(w http.ResponseWriter, r *http.Request) {
+			switch cfg.statusCode {
+			case http.StatusOK:
+				mockPath := path.Join("testdata", cfg.filename)
+				http.ServeFile(w, r, mockPath)
+			default:
+				w.WriteHeader(cfg.statusCode)
+				fmt.Fprintf(w, "status_code: %d", cfg.statusCode)
+			}
+		})
+	}
 	return httptest.NewServer(serveMux)
 }
 
@@ -786,6 +789,702 @@ func TestClient_HomePageContentWithContext(t *testing.T) {
 
 			c, _ := yts.NewClientWithConfig(&clientCfg)
 			got, err := c.HomePageContentWithContext(tt.ctx)
+			assertError(t, methodName, err, tt.wantErr)
+			assertEqual(t, methodName, got, tt.want)
+		})
+	}
+}
+
+func TestClient_ResolveMovieSlugToIDWithContext(t *testing.T) {
+	const (
+		methodName  = "Client.ResolveMovieSlugtoID"
+		testdataDir = "resolve_movie_slug"
+		movieID     = 3175
+		movieSlug   = "the-dark-knight-2008"
+		pattern     = "/movies/the-dark-knight-2008"
+	)
+
+	tests := []struct {
+		name       string
+		handlerCfg testHTTPHandlerConfig
+		clientCfg  yts.ClientConfig
+		ctx        context.Context
+		movieSlug  string
+		want       int
+		wantErr    error
+	}{
+		{
+			name:       "resolves movie slug to ID successfully when available",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "ok_response.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  "the-dark-knight-2008",
+			want:       movieID,
+		},
+		{
+			name:       "returns error when required selector is not available",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "missing_selector.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  "the-dark-knight-2008",
+			want:       0,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error if fails to pass available movie ID",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "invalid_id.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  "the-dark-knight-2008",
+			want:       0,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clientCfg := tt.clientCfg
+			if tt.handlerCfg.pattern != "" {
+				server := createTestServer(t, tt.handlerCfg)
+				serverURL, _ := url.Parse(server.URL)
+				clientCfg.SiteURL = *serverURL
+				defer server.Close()
+			}
+
+			c, _ := yts.NewClientWithConfig(&clientCfg)
+			got, err := c.ResolveMovieSlugToIDWithContext(tt.ctx, tt.movieSlug)
+			assertError(t, methodName, err, tt.wantErr)
+			assertEqual(t, methodName, got, tt.want)
+		})
+	}
+}
+
+func TestClient_MovieDirectorWithContext(t *testing.T) {
+	const (
+		methodName  = "Client.MovieDirector"
+		testdataDir = "movie_director"
+		movieSlug   = "road-house-1989"
+		pattern     = "/movies/road-house-1989"
+	)
+
+	timedoutCtx, cancel := context.WithDeadline(
+		context.Background(), time.Now(),
+	)
+	defer cancel()
+
+	mockedOKResponse := yts.MovieDirectorResponse{
+		Data: yts.MovieDirectorData{
+			Director: yts.SiteMovieDirector{
+				Name:          "Rowdy Herrington",
+				URLSmallImage: "https://img.yts.mx/assets/images/actors/thumb/nm1509613.jpg",
+			},
+		},
+	}
+
+	tests := []struct {
+		name       string
+		handlerCfg testHTTPHandlerConfig
+		clientCfg  yts.ClientConfig
+		ctx        context.Context
+		movieSlug  string
+		want       *yts.MovieDirectorResponse
+		wantErr    error
+	}{
+		{
+			name:      "returns error when movie slug is an empty string",
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			movieSlug: "",
+			wantErr:   yts.ErrValidationFailure,
+		},
+		{
+			name:       "returns error when director selector is missing",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "missing_director.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when director name is missing",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "missing_name.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when director thumbnail URL is missing",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "invalid_thumbnail.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when request context times out",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "ok_response.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        timedoutCtx,
+			movieSlug:  movieSlug,
+			wantErr:    context.DeadlineExceeded,
+		},
+		{
+			name:       "returns error when response status is outside 2.x.x range",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "non_existent.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrUnexpectedHTTPResponseStatus,
+		},
+		{
+			name:       "returns mocked ok response when scraping succeeds",
+			clientCfg:  yts.DefaultClientConfig(),
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "ok_response.html"),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			want:       &mockedOKResponse,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clientCfg := tt.clientCfg
+			if tt.handlerCfg.pattern != "" {
+				server := createTestServer(t, tt.handlerCfg)
+				serverURL, _ := url.Parse(server.URL)
+				clientCfg.SiteURL = *serverURL
+				defer server.Close()
+			}
+
+			c, _ := yts.NewClientWithConfig(&clientCfg)
+			got, err := c.MovieDirectorWithContext(tt.ctx, tt.movieSlug)
+			assertError(t, methodName, err, tt.wantErr)
+			assertEqual(t, methodName, got, tt.want)
+		})
+	}
+}
+
+func TestClient_MoviesReviewsWithContext(t *testing.T) {
+	const (
+		methodName  = "Client.MovieReviews"
+		testdataDir = "movie_reviews"
+		movieSlug   = "oppenheimer-2023"
+		pattern     = "/movies/oppenheimer-2023"
+	)
+
+	timedoutCtx, cancel := context.WithDeadline(
+		context.Background(), time.Now(),
+	)
+	defer cancel()
+
+	mockedOKResponse := yts.MovieReviewsResponse{
+		Data: yts.MovieReviewsData{
+			Reviews: []yts.SiteMovieReview{
+				{
+					Author:  "claszdsburrogato",
+					Rating:  "7 / 10",
+					Title:   "title-one",
+					Content: "content-one",
+				},
+				{
+					Author:  "Bonobo13579",
+					Rating:  "7 / 10",
+					Title:   "title-two",
+					Content: "content-two",
+				},
+				{
+					Author:  "MrDHWong",
+					Rating:  "10 / 10",
+					Title:   "title-three",
+					Content: "content-three",
+				},
+			},
+			ReviewsMoreLink: "https://www.imdb.com/title/tt15398776/reviews",
+		},
+	}
+
+	tests := []struct {
+		name       string
+		handlerCfg testHTTPHandlerConfig
+		clientCfg  yts.ClientConfig
+		ctx        context.Context
+		movieSlug  string
+		want       *yts.MovieReviewsResponse
+		wantErr    error
+	}{
+		{
+			name:      "returns error when movie slug is an empty string",
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			movieSlug: "",
+			wantErr:   yts.ErrValidationFailure,
+		},
+		{
+			name:       "returns error when reviews selector is missing",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "missing_reviews.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when author is missing",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "missing_author.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when title is missing",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "missing_title.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when rating is missing",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "missing_rating.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when rating is invalid",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "invalid_rating.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when content is missing",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "missing_content.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when more reviews URL is missing",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "missing_reviews_more_url.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when more reviews URL is invalid",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "invalid_reviews_more_url.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:       "returns error when request context times out",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "ok_response.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        timedoutCtx,
+			movieSlug:  movieSlug,
+			wantErr:    context.DeadlineExceeded,
+		},
+		{
+			name:       "returns error when response status is outside 2.x.x range",
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "non_existent.html"),
+			clientCfg:  yts.DefaultClientConfig(),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			wantErr:    yts.ErrUnexpectedHTTPResponseStatus,
+		},
+		{
+			name:       "returns mocked ok response when scraping succeeds",
+			clientCfg:  yts.DefaultClientConfig(),
+			handlerCfg: defaultHandlerConfig(t, pattern, testdataDir, "ok_response.html"),
+			ctx:        context.Background(),
+			movieSlug:  movieSlug,
+			want:       &mockedOKResponse,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clientCfg := tt.clientCfg
+			if tt.handlerCfg.pattern != "" {
+				server := createTestServer(t, tt.handlerCfg)
+				serverURL, _ := url.Parse(server.URL)
+				clientCfg.SiteURL = *serverURL
+				defer server.Close()
+			}
+
+			c, _ := yts.NewClientWithConfig(&clientCfg)
+			got, err := c.MovieReviewsWithContext(tt.ctx, tt.movieSlug)
+			assertError(t, methodName, err, tt.wantErr)
+			assertEqual(t, methodName, got, tt.want)
+		})
+	}
+}
+
+func TestClient_MovieCommentsWithContext(t *testing.T) {
+	const (
+		methodName           = "Client.MovieComments"
+		testdataDir          = "movie_comments"
+		movieSlug            = "oppenheimer-2023"
+		commentsPattern      = "ajax/comments/57427"
+		commentsCountPattern = "movies/oppenheimer-2023"
+	)
+
+	timedoutCtx, cancel := context.WithDeadline(
+		context.Background(), time.Now(),
+	)
+
+	defer cancel()
+
+	getHandlerCfgsFor := func(subDir string) []testHTTPHandlerConfig {
+		testdataSubDir := fmt.Sprintf("%s/%s", testdataDir, subDir)
+		return []testHTTPHandlerConfig{
+			defaultHandlerConfig(t, commentsPattern, testdataSubDir, "comments.html"),
+			defaultHandlerConfig(t, commentsCountPattern, testdataSubDir, "comments_count.html"),
+		}
+	}
+
+	getMockedResponse := func(more bool) yts.MovieCommentsResponse {
+		return yts.MovieCommentsResponse{
+			Data: yts.MovieCommentsData{
+				CommentsMore: more,
+				Comments: []yts.SiteMovieComment{
+					{
+						Author:    "aaron2023",
+						AvatarURL: "https://img.yts.mx/assets/images/users/thumb/default_avatar.jpg",
+						Timestamp: "April 30, 2024 at 09:46 am",
+						Content:   "content-one",
+						LikeCount: 0,
+					},
+					{
+						Author:    "AmanS666",
+						AvatarURL: "https://img.yts.mx/assets/images/users/thumb/default_avatar.jpg",
+						Timestamp: "January 29, 2024 at 09:13 am",
+						Content:   "content-two",
+						LikeCount: 1,
+					},
+					{
+						Author:    "zorg2",
+						AvatarURL: "https://img.yts.mx/assets/images/users/thumb/default_avatar.jpg",
+						Timestamp: "January 19, 2024 at 10:44 am",
+						Content:   "content-three",
+						LikeCount: 0,
+					},
+				},
+			},
+		}
+	}
+
+	var (
+		mockedOKResponseMore = getMockedResponse(true)
+		mockedOKResponse     = getMockedResponse(false)
+	)
+
+	tests := []struct {
+		name         string
+		handlerCfgs  []testHTTPHandlerConfig
+		clientCfg    yts.ClientConfig
+		ctx          context.Context
+		movieSlug    string
+		commentsPage int
+		want         *yts.MovieCommentsResponse
+		wantErr      error
+	}{
+		{
+			name:         "returns error when movie slug is an empty string",
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    "",
+			commentsPage: 1,
+			wantErr:      yts.ErrValidationFailure,
+		},
+		{
+			name:         "returns error when comments page is less than 1",
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 0,
+			wantErr:      yts.ErrValidationFailure,
+		},
+		{
+			name:         "returns error when movie page is missing movie ID attribute",
+			handlerCfgs:  getHandlerCfgsFor("missing_movie_id"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when movie page has invalid movie ID attribute value",
+			handlerCfgs:  getHandlerCfgsFor("invalid_movie_id"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when movie page is missing comment count",
+			handlerCfgs:  getHandlerCfgsFor("missing_comment_count"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when movie page has invalid movie comment count",
+			handlerCfgs:  getHandlerCfgsFor("invalid_comment_count"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when any movie comment has a missing author",
+			handlerCfgs:  getHandlerCfgsFor("missing_author"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when any movie comment has a missing avatar URL",
+			handlerCfgs:  getHandlerCfgsFor("missing_avatar_url"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when any movie comment has an invalid avatar URL",
+			handlerCfgs:  getHandlerCfgsFor("invalid_avatar_url"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when any movie comment has a missing timestamp",
+			handlerCfgs:  getHandlerCfgsFor("missing_timestamp"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when any movie comment has missing content",
+			handlerCfgs:  getHandlerCfgsFor("missing_content"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:         "returns error when request context times out",
+			handlerCfgs:  getHandlerCfgsFor("ok_response"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          timedoutCtx,
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			wantErr:      context.DeadlineExceeded,
+		},
+		{
+			name:         "returns mocked ok response when scraping succeeds",
+			handlerCfgs:  getHandlerCfgsFor("ok_response"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			want:         &mockedOKResponse,
+		},
+		{
+			name:         `returns with "CommentMore" true when more comments left`,
+			handlerCfgs:  getHandlerCfgsFor("ok_response_more"),
+			clientCfg:    yts.DefaultClientConfig(),
+			ctx:          context.Background(),
+			movieSlug:    movieSlug,
+			commentsPage: 1,
+			want:         &mockedOKResponseMore,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clientCfg := tt.clientCfg
+			if len(tt.handlerCfgs) > 0 {
+				server := createTestServer(t, tt.handlerCfgs...)
+				serverURL, _ := url.Parse(server.URL)
+				clientCfg.SiteURL = *serverURL
+				defer server.Close()
+			}
+
+			c, _ := yts.NewClientWithConfig(&clientCfg)
+			got, err := c.MovieCommentsWithContext(tt.ctx, tt.movieSlug, tt.commentsPage)
+			assertError(t, methodName, err, tt.wantErr)
+			assertEqual(t, methodName, got, tt.want)
+		})
+	}
+}
+
+func TestClient_MovieAdditionalDetailsWithContext(t *testing.T) {
+	const (
+		methodName       = "Client.MovieAdditionalDetails"
+		testdataDir      = "movie_additional_details"
+		movieSlug        = "oppenheimer-2023"
+		commentsPattern  = "ajax/comments/57427"
+		moviePagePattern = "movies/oppenheimer-2023"
+	)
+
+	getHandlerCfgsFor := func(subDir string) []testHTTPHandlerConfig {
+		testdataSubDir := fmt.Sprintf("%s/%s", testdataDir, subDir)
+		return []testHTTPHandlerConfig{
+			defaultHandlerConfig(t, commentsPattern, testdataSubDir, "comments.html"),
+			defaultHandlerConfig(t, moviePagePattern, testdataSubDir, "movie_page.html"),
+		}
+	}
+
+	mockedOKResponse := yts.MovieAdditionalDetailsResponse{
+		Data: yts.MovieAdditionalDetailsData{
+			Director: yts.SiteMovieDirector{
+				Name:          "Christopher Nolan",
+				URLSmallImage: "https://img.yts.mx/assets/images/actors/thumb/nm0634240.jpg",
+			},
+			Comments: []yts.SiteMovieComment{
+				{
+					Author:    "aaron2023",
+					AvatarURL: "https://img.yts.mx/assets/images/users/thumb/default_avatar.jpg",
+					Timestamp: "April 30, 2024 at 09:46 am",
+					Content:   "content-one",
+					LikeCount: 0,
+				},
+				{
+					Author:    "AmanS666",
+					AvatarURL: "https://img.yts.mx/assets/images/users/thumb/default_avatar.jpg",
+					Timestamp: "January 29, 2024 at 09:13 am",
+					Content:   "content-two",
+					LikeCount: 1,
+				},
+				{
+					Author:    "zorg2",
+					AvatarURL: "https://img.yts.mx/assets/images/users/thumb/default_avatar.jpg",
+					Timestamp: "January 19, 2024 at 10:44 am",
+					Content:   "content-three",
+					LikeCount: 0,
+				},
+			},
+			Reviews: []yts.SiteMovieReview{
+				{
+					Author:  "claszdsburrogato",
+					Rating:  "7 / 10",
+					Title:   "title-one",
+					Content: "content-one",
+				},
+				{
+					Author:  "Bonobo13579",
+					Rating:  "7 / 10",
+					Title:   "title-two",
+					Content: "content-two",
+				},
+				{
+					Author:  "MrDHWong",
+					Rating:  "10 / 10",
+					Title:   "title-three",
+					Content: "content-three",
+				},
+			},
+			ReviewsMoreLink: "https://www.imdb.com/title/tt15398776/reviews",
+		},
+	}
+
+	timedoutCtx, cancel := context.WithDeadline(
+		context.Background(), time.Now(),
+	)
+	defer cancel()
+
+	tests := []struct {
+		name        string
+		handlerCfgs []testHTTPHandlerConfig
+		clientCfg   yts.ClientConfig
+		ctx         context.Context
+		movieSlug   string
+		want        *yts.MovieAdditionalDetailsResponse
+		wantErr     error
+	}{
+		{
+			name:      "returns error when movie slug is an empty string",
+			clientCfg: yts.DefaultClientConfig(),
+			ctx:       context.Background(),
+			movieSlug: "",
+			wantErr:   yts.ErrValidationFailure,
+		},
+		{
+			name:        "returns error when movie page scraping fails",
+			handlerCfgs: getHandlerCfgsFor("missing_movie_page_id"),
+			clientCfg:   yts.DefaultClientConfig(),
+			ctx:         context.Background(),
+			movieSlug:   movieSlug,
+			wantErr:     yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:        "returns error when comment network call fails",
+			handlerCfgs: getHandlerCfgsFor("comments_not_found"),
+			clientCfg:   yts.DefaultClientConfig(),
+			ctx:         context.Background(),
+			movieSlug:   movieSlug,
+			wantErr:     yts.ErrUnexpectedHTTPResponseStatus,
+		},
+		{
+			name:        "returns error when comment scraping fails",
+			handlerCfgs: getHandlerCfgsFor("missing_comment_content"),
+			clientCfg:   yts.DefaultClientConfig(),
+			ctx:         context.Background(),
+			movieSlug:   movieSlug,
+			wantErr:     yts.ErrContentRetrievalFailure,
+		},
+		{
+			name:        "returns error when request context times out",
+			handlerCfgs: getHandlerCfgsFor("ok_response"),
+			clientCfg:   yts.DefaultClientConfig(),
+			ctx:         timedoutCtx,
+			movieSlug:   movieSlug,
+			wantErr:     context.DeadlineExceeded,
+		},
+		{
+			name:        "returns mocked ok response when scraping succeeds",
+			handlerCfgs: getHandlerCfgsFor("ok_response"),
+			clientCfg:   yts.DefaultClientConfig(),
+			ctx:         context.Background(),
+			movieSlug:   movieSlug,
+			want:        &mockedOKResponse,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clientCfg := tt.clientCfg
+			if len(tt.handlerCfgs) > 0 {
+				server := createTestServer(t, tt.handlerCfgs...)
+				serverURL, _ := url.Parse(server.URL)
+				clientCfg.SiteURL = *serverURL
+				defer server.Close()
+			}
+
+			c, _ := yts.NewClientWithConfig(&clientCfg)
+			got, err := c.MovieAdditionalDetailsWithContext(tt.ctx, tt.movieSlug)
 			assertError(t, methodName, err, tt.wantErr)
 			assertEqual(t, methodName, got, tt.want)
 		})

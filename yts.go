@@ -313,6 +313,37 @@ func (c *Client) MovieSuggestions(movieID int) (*MovieSuggestionsResponse, error
 	return c.MovieSuggestionsWithContext(context.Background(), movieID)
 }
 
+// ResolveMovieSlugToIDWithContext is the same as the ResolveMovieSlugToID method
+// but requires a context.Context argument to be passed, this context is then
+// passed to the http.NewRequestWithContext call used for making the network
+// request.
+func (c *Client) ResolveMovieSlugToIDWithContext(ctx context.Context, movieSlug string) (int, error) {
+	if movieSlug == "" {
+		err := fmt.Errorf("provided movie slug cannot be an empty")
+		return 0, wrapErr(ErrValidationFailure, err)
+	}
+
+	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
+	pageURL, _ := url.Parse(pageURLString)
+	document, err := c.newDocumentRequestWithContext(ctx, pageURL)
+	if err != nil {
+		return 0, err
+	}
+
+	movieID, err := c.scrapeMovieID(document)
+	if err != nil {
+		return 0, ErrContentRetrievalFailure
+	}
+
+	return movieID, nil
+}
+
+// ResolveMovieSlugToID method converts the provided movie slug to its corresponding
+// ID in the YTS movie database.
+func (c *Client) ResolveMovieSlugToID(movieSlug string) (int, error) {
+	return c.ResolveMovieSlugToIDWithContext(context.Background(), movieSlug)
+}
+
 type TrendingMoviesData struct {
 	Movies []SiteMovie `json:"movies"`
 }
@@ -388,6 +419,235 @@ func (c *Client) HomePageContentWithContext(ctx context.Context) (
 // instance of *HomePageContentResponse.
 func (c *Client) HomePageContent() (*HomePageContentResponse, error) {
 	return c.HomePageContentWithContext(context.Background())
+}
+
+type MovieDirectorData struct {
+	Director SiteMovieDirector `json:"director"`
+}
+
+// MovieDirectorResponse holds data corresponding to the director of a movie
+// the director information being the thumbnail URL and the name of the
+// director.
+type MovieDirectorResponse struct {
+	Data MovieDirectorData `json:"data"`
+}
+
+// MovieDirector method fetches the director of the movie whose slug has been
+// provided as argument to this method.
+func (c *Client) MovieDirector(movieSlug string) (*MovieDirectorResponse, error) {
+	return c.MovieDirectorWithContext(context.Background(), movieSlug)
+}
+
+// MovieDirectorWithContext is the same as the MovieDirector method but
+// requires a context.Context argument to be passed, this context is then passed to
+// the http.NewRequestWithContext call used for making the network request.
+func (c *Client) MovieDirectorWithContext(ctx context.Context, movieSlug string) (
+	*MovieDirectorResponse, error,
+) {
+	if movieSlug == "" {
+		err := fmt.Errorf("provided movie slug cannot be an empty")
+		return nil, wrapErr(ErrValidationFailure, err)
+	}
+
+	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
+	pageURL, _ := url.Parse(pageURLString)
+	document, err := c.newDocumentRequestWithContext(ctx, pageURL)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := c.scrapeMovieDirectorData(document)
+	if err != nil {
+		return nil, ErrContentRetrievalFailure
+	}
+
+	return &MovieDirectorResponse{*data}, nil
+}
+
+type MovieReviewsData struct {
+	Reviews         []SiteMovieReview `json:"reviews"`
+	ReviewsMoreLink string            `json:"reviews_more_link"`
+}
+
+// A MovieReviewsResponse contains reviews available for a movie on its YTS page.
+type MovieReviewsResponse struct {
+	Data MovieReviewsData `json:"data"`
+}
+
+// MovieReviewsWithContext is the same as the MovieReviews method but requires a
+// context.Context argument to be passed, this context is then passed to the
+// http.NewRequestWithContext call used for making the network request.
+func (c *Client) MovieReviewsWithContext(ctx context.Context, movieSlug string) (
+	*MovieReviewsResponse, error,
+) {
+	if movieSlug == "" {
+		err := fmt.Errorf("provided movie slug cannot be an empty")
+		return nil, wrapErr(ErrValidationFailure, err)
+	}
+
+	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
+	pageURL, _ := url.Parse(pageURLString)
+	document, err := c.newDocumentRequestWithContext(ctx, pageURL)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := c.scrapeMovieReviewsData(document)
+	if err != nil {
+		return nil, ErrContentRetrievalFailure
+	}
+
+	return &MovieReviewsResponse{*data}, nil
+}
+
+// MovieReviews method fetches the movie page corresponding to the provided movie
+// slug and scrapes the movie reviews contained therein.
+func (c *Client) MovieReviews(movieSlug string) (*MovieReviewsResponse, error) {
+	return c.MovieReviewsWithContext(context.Background(), movieSlug)
+}
+
+const movieCommentsPerPage = 30
+
+type MovieCommentsData struct {
+	CommentsMore bool               `json:"comments_more"`
+	Comments     []SiteMovieComment `json:"comments"`
+}
+
+// A MovieCommentsResponse contains the comments return by the following endpoint
+// /ajax/comments/{movie_id}?offset={offset} for a movie.
+type MovieCommentsResponse struct {
+	Data MovieCommentsData `json:"data"`
+}
+
+// MovieCommentsWithContext is the same as the MovieComments method but requires a
+// context.Context argument to be passed, this context is then passed to the
+// http.NewRequestWithContext call used for making the network request.
+func (c *Client) MovieCommentsWithContext(ctx context.Context, movieSlug string, page int) (
+	*MovieCommentsResponse, error,
+) {
+	if movieSlug == "" {
+		err := fmt.Errorf("provided movie slug cannot be an empty")
+		return nil, wrapErr(ErrValidationFailure, err)
+	}
+
+	if page < 1 {
+		err := fmt.Errorf("provided comment page must be at least 1")
+		return nil, wrapErr(ErrValidationFailure, err)
+	}
+
+	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
+	pageURL, _ := url.Parse(pageURLString)
+	pageDoc, err := c.newDocumentRequestWithContext(ctx, pageURL)
+	if err != nil {
+		return nil, err
+	}
+
+	meta, err := c.scrapeMovieCommentsMetaData(pageDoc)
+	if err != nil {
+		return nil, ErrContentRetrievalFailure
+	}
+
+	var (
+		offset = (page - 1) * movieCommentsPerPage
+		isLast = meta.commentCount-offset <= movieCommentsPerPage
+	)
+
+	commentURLString := c.getCommentsURL(meta.movieID, offset)
+	commentURL, _ := url.Parse(commentURLString)
+	commentDoc, err := c.newDocumentRequestWithContext(ctx, commentURL)
+	if err != nil {
+		return nil, err
+	}
+
+	comments, err := c.scrapeMovieComments(commentDoc)
+	if err != nil {
+		return nil, ErrContentRetrievalFailure
+	}
+
+	data := MovieCommentsData{
+		CommentsMore: !isLast,
+		Comments:     comments,
+	}
+
+	return &MovieCommentsResponse{data}, nil
+}
+
+// MovieComments method fetches the comments for the provided movie slug, the method
+// first resolves the movie slug to its id and then uses the following endpoint to
+// fetch and scrape comments/ajax/comments/{movie_id}?offset={offset} for the movie.
+func (c *Client) MovieComments(movieSlug string, page int) (*MovieCommentsResponse, error) {
+	return c.MovieCommentsWithContext(context.Background(), movieSlug, page)
+}
+
+type MovieAdditionalDetailsData struct {
+	Director        SiteMovieDirector  `json:"director"`
+	Comments        []SiteMovieComment `json:"comments"`
+	Reviews         []SiteMovieReview  `json:"reviews"`
+	ReviewsMoreLink string             `json:"reviews_more_link"`
+}
+
+// A MovieAdditionalDetailsResponse contains the movie directory, reviews and
+// the initial comments available on the movie page.
+type MovieAdditionalDetailsResponse struct {
+	Data MovieAdditionalDetailsData `json:"data"`
+}
+
+// MovieAdditionalDetailsWithContext is the same as the MovieAdditionalDetails
+// method but requires a context.Context argument to be passed, this context is then
+// passed to the http.NewRequestWithContext call used for making the network request.
+func (c *Client) MovieAdditionalDetailsWithContext(ctx context.Context, movieSlug string) (
+	*MovieAdditionalDetailsResponse, error,
+) {
+	if movieSlug == "" {
+		err := fmt.Errorf("provided movie slug cannot be an empty")
+		return nil, wrapErr(ErrValidationFailure, err)
+	}
+
+	pageURLString := fmt.Sprintf("%s/movies/%s", &c.config.SiteURL, movieSlug)
+	pageURL, _ := url.Parse(pageURLString)
+	pageDocument, err := c.newDocumentRequestWithContext(ctx, pageURL)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		dData, dErr = c.scrapeMovieDirectorData(pageDocument)
+		rData, rErr = c.scrapeMovieReviewsData(pageDocument)
+		cData, mErr = c.scrapeMovieCommentsMetaData(pageDocument)
+	)
+
+	if v := errors.Join(dErr, rErr, mErr); v != nil {
+		debug.Println(v)
+		return nil, ErrContentRetrievalFailure
+	}
+
+	commentURLString := c.getCommentsURL(cData.movieID, 0)
+	commentURL, _ := url.Parse(commentURLString)
+	commentDoc, err := c.newDocumentRequestWithContext(ctx, commentURL)
+	if err != nil {
+		return nil, err
+	}
+
+	comments, cErr := c.scrapeMovieComments(commentDoc)
+	if cErr != nil {
+		return nil, ErrContentRetrievalFailure
+	}
+
+	data := MovieAdditionalDetailsData{
+		Comments:        comments,
+		Director:        dData.Director,
+		Reviews:         rData.Reviews,
+		ReviewsMoreLink: rData.ReviewsMoreLink,
+	}
+
+	return &MovieAdditionalDetailsResponse{data}, nil
+}
+
+// MovieAdditionalDetails client method fetches the movie page for the provided
+// movie slug and scrapes the director, reviews and initial comments provided on
+// the movie page.
+func (c *Client) MovieAdditionalDetails(movieSlug string) (*MovieAdditionalDetailsResponse, error) {
+	return c.MovieAdditionalDetailsWithContext(context.Background(), movieSlug)
 }
 
 // A TorrentMagnets is the return type of MagnetLinks method of a `yts.Client`

@@ -17,6 +17,7 @@ const (
 	popularCSS  = "div#popular-downloads div.browse-movie-wrap"
 	latestCSS   = "div.content-dark div.home-movies div.browse-movie-wrap"
 	upcomingCSS = "div.content-dark ~ div.home-content div.browse-movie-wrap"
+	directorCSS = "div#movie-content div#movie-sub-info div#crew div.directors"
 )
 
 const (
@@ -27,6 +28,33 @@ const (
 	movieProgressCSS = "div.browse-movie-year progress"
 	movieGenreCSS    = "div.browse-movie-wrap h4:not([class='rating'])"
 )
+
+const (
+	directorThumbCSS = "div.list-cast a.avatar-thumb img"
+	directorNameCSS  = "div.list-cast-info a.name-cast span span"
+)
+
+const (
+	reviewsCSS      = "div#movie-reviews div.review"
+	reviewRatingCSS = "div.review-properties span.review-rating"
+	reviewAuthorCSS = "div.review-properties span.review-author"
+	reviewsMoreCSS  = "div#movie-reviews a.more-reviews"
+)
+
+const (
+	commentCSS          = "div.comment"
+	movieIDCSS          = "div#movie-info[data-movie-id]"
+	commentCountCSS     = "div#movie-comments span#comment-count"
+	commentAvatarCSS    = "div.comment a.avatar-thumb img"
+	commentLikeCountCSS = "div.comment div.comment-likes span.comment-like-count"
+	commentAuthorCSS    = "div.comment div.comment-likes + span a"
+	commentTimestampCSS = "div.comment div.comment-likes + span"
+	commentContentCSS   = "div.comment div.comment-text p"
+)
+
+func cleanString(s string) string {
+	return strings.Join(strings.Fields(s), " ")
+}
 
 // The SiteMovieBase type contains all the information required by both the
 // and SiteMovieUpcoming types.
@@ -201,6 +229,164 @@ func (sum *SiteUpcomingMovie) scrape(s *goquery.Selection) error {
 	return sum.validateScraping()
 }
 
+// A SiteMovieDirector instance contains the corresponding name and thumbnail image
+// URL for a movie director as show on a YTS movie page.
+type SiteMovieDirector struct {
+	Name          string `json:"name"`
+	URLSmallImage string `json:"url_small_image"`
+}
+
+func (smd *SiteMovieDirector) validateScraping() error {
+	return validation.ValidateStruct(
+		smd,
+		validation.Field(
+			&smd.Name,
+			validation.Required,
+		),
+		validation.Field(
+			&smd.URLSmallImage,
+			validation.Required,
+			is.URL,
+		),
+	)
+}
+
+func (smd *SiteMovieDirector) scrape(s *goquery.Selection) error {
+	var (
+		nameSel     = s.Find(directorNameCSS)
+		thumbImgSel = s.Find(directorThumbCSS)
+	)
+
+	smd.Name = cleanString(nameSel.Text())
+	smd.URLSmallImage, _ = thumbImgSel.Attr("src")
+	return smd.validateScraping()
+}
+
+// A SiteMovieReview instance contains all the visible information for a movie 
+// review as shown on a YTS movie page.
+type SiteMovieReview struct {
+	Author  string `json:"author"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+	Rating  string `json:"rating"`
+}
+
+func (smr *SiteMovieReview) validateScraping() error {
+	return validation.ValidateStruct(
+		smr,
+		validation.Field(
+			&smr.Author,
+			validation.Required,
+		),
+		validation.Field(
+			&smr.Title,
+			validation.Required,
+		),
+		validation.Field(
+			&smr.Content,
+			validation.Required,
+		),
+		validation.Field(
+			&smr.Rating,
+			validateRatingRule,
+			validation.Required,
+		),
+	)
+}
+
+func (smr *SiteMovieReview) scrape(s *goquery.Selection) error {
+	var (
+		authorSel  = s.Find(reviewAuthorCSS)
+		ratingSel  = s.Find(reviewRatingCSS)
+		titleSel   = s.Find("h4")
+		contentSel = s.Find("article")
+	)
+
+	smr.Author = cleanString(authorSel.Text())
+	smr.Rating = cleanString(ratingSel.Text())
+	smr.Title = cleanString(titleSel.Text())
+	smr.Content = cleanString(contentSel.Text())
+	return smr.validateScraping()
+}
+
+// A SiteMovieComment instance contains all the visible information for a movie 
+// comment as shown on a YTS movie page.
+type SiteMovieComment struct {
+	Author    string `json:"author"`
+	AvatarURL string `json:"avatar_url"`
+	Timestamp string `json:"timestamp"`
+	Content   string `json:"content"`
+	LikeCount int    `json:"like_count"`
+}
+
+func (smc *SiteMovieComment) validateScraping() error {
+	return validation.ValidateStruct(
+		smc,
+		validation.Field(
+			&smc.Author,
+			validation.Required,
+		),
+		validation.Field(
+			&smc.AvatarURL,
+			validation.Required,
+			is.URL,
+		),
+		validation.Field(
+			&smc.Timestamp,
+			validation.Required,
+		),
+		validation.Field(
+			&smc.Content,
+			validation.Required,
+		),
+	)
+}
+
+func (smc *SiteMovieComment) scrape(s *goquery.Selection) error {
+	var (
+		avatarSel    = s.Find(commentAvatarCSS)
+		likeCountSel = s.Find(commentLikeCountCSS)
+		authorSel    = s.Find(commentAuthorCSS)
+		timestampSel = s.Find(commentTimestampCSS)
+		contentSel   = s.Find(commentContentCSS)
+	)
+
+	var (
+		timestampeNodes = timestampSel.Contents().Nodes
+		timestampStr    = timestampeNodes[len(timestampeNodes)-1].Data
+		likeCountStr    = cleanString(likeCountSel.Text())
+	)
+
+	smc.Author = cleanString(authorSel.Text())
+	smc.AvatarURL, _ = avatarSel.Attr("src")
+	smc.LikeCount, _ = strconv.Atoi(likeCountStr)
+	smc.Timestamp = cleanString(timestampStr)
+	smc.Content = cleanString(contentSel.Text())
+	return smc.validateScraping()
+}
+
+func (c *Client) scrapeMovieID(d *goquery.Document) (int, error) {
+	var (
+		movieIDSel         = d.Find(movieIDCSS)
+		movieIDStr, exists = movieIDSel.Attr("data-movie-id")
+	)
+
+	if !exists {
+		err := fmt.Errorf(`"data-movie-id" attr doesn't exist`)
+		debug.Println(err)
+		return 0, err
+	}
+
+	movieID, err := strconv.Atoi(movieIDStr)
+	if err != nil {
+		sErr := fmt.Errorf("failed to convert movieID, %w", err)
+		debug.Println(sErr)
+		return 0, sErr
+	}
+
+	return movieID, nil
+}
+
 func (c *Client) scrapeTrendingMoviesData(d *goquery.Document) (*TrendingMoviesData, error) {
 	selection := d.Find(trendingCSS)
 	if selection.Length() == 0 {
@@ -310,4 +496,134 @@ func (c *Client) scrapeHomePageContentData(d *goquery.Document) (*HomePageConten
 	}
 
 	return response, nil
+}
+
+func (c *Client) scrapeMovieDirectorData(d *goquery.Document) (*MovieDirectorData, error) {
+	directorSel := d.Find(directorCSS)
+	if directorSel.Length() == 0 {
+		err := fmt.Errorf("no elements found for %q", directorCSS)
+		debug.Println(err)
+		return nil, err
+	}
+
+	director := &SiteMovieDirector{}
+	if err := director.scrape(directorSel); err != nil {
+		debug.Println(err)
+		return nil, err
+	}
+
+	return &MovieDirectorData{*director}, nil
+}
+
+func (c *Client) scrapeMovieReviewsData(d *goquery.Document) (*MovieReviewsData, error) {
+	reviewsSel := d.Find(reviewsCSS)
+	if reviewsSel.Length() == 0 {
+		err := fmt.Errorf("no elements found for %q", reviewsCSS)
+		debug.Println(err)
+		return nil, err
+	}
+
+	reviewsMoreSel := d.Find(reviewsMoreCSS)
+	if reviewsMoreSel.Length() == 0 {
+		err := fmt.Errorf("no elements found for %q", reviewsMoreCSS)
+		debug.Println(err)
+		return nil, err
+	}
+
+	reviewsMoreURL, _ := reviewsMoreSel.Attr("href")
+	if err := validation.Validate(reviewsMoreURL, is.URL); err != nil {
+		err := fmt.Errorf(`invalid "href" found for %q`, reviewsMoreCSS)
+		debug.Println(err)
+		return nil, err
+	}
+
+	var (
+		movieReviews = make([]SiteMovieReview, 0)
+		scrapingErrs = make([]error, 0)
+	)
+
+	reviewsSel.Each(func(i int, s *goquery.Selection) {
+		movieReview := SiteMovieReview{}
+		err := movieReview.scrape(s)
+		if err != nil {
+			err = fmt.Errorf("reviews, i=%d, %w", i, err)
+		}
+
+		movieReviews = append(movieReviews, movieReview)
+		scrapingErrs = append(scrapingErrs, err)
+	})
+
+	if err := errors.Join(scrapingErrs...); err != nil {
+		debug.Println(err)
+		return nil, err
+	}
+
+	return &MovieReviewsData{
+		Reviews:         movieReviews,
+		ReviewsMoreLink: reviewsMoreURL,
+	}, nil
+}
+
+type siteMovieCommentsMeta struct {
+	movieID      int
+	commentCount int
+}
+
+func (c *Client) scrapeMovieCommentsMetaData(d *goquery.Document) (*siteMovieCommentsMeta, error) {
+	commentCountSel := d.Find(commentCountCSS)
+	if commentCountSel.Length() == 0 {
+		err := fmt.Errorf("no elements found for %q", commentCountCSS)
+		debug.Println(err)
+		return nil, err
+	}
+
+	commentCountText := cleanString(commentCountSel.Text())
+	commentCount, err := strconv.Atoi(commentCountText)
+	if err != nil {
+		sErr := fmt.Errorf("failed to convert comment count, %w", err)
+		debug.Println(sErr)
+		return nil, err
+	}
+
+	movieID, err := c.scrapeMovieID(d)
+	if err != nil {
+		sErr := fmt.Errorf("failed to convert movieID, %w", err)
+		debug.Println(sErr)
+		return nil, err
+	}
+
+	return &siteMovieCommentsMeta{
+		movieID:      movieID,
+		commentCount: commentCount,
+	}, nil
+}
+
+func (c *Client) scrapeMovieComments(d *goquery.Document) ([]SiteMovieComment, error) {
+	commentSel := d.Find(commentCSS)
+	if commentSel.Length() == 0 {
+		return []SiteMovieComment{}, nil
+	}
+
+	var (
+		movieComments = make([]SiteMovieComment, 0)
+		scrapingErrs  = make([]error, 0)
+	)
+
+	commentSel.Each(func(i int, s *goquery.Selection) {
+		movieComment := SiteMovieComment{}
+		err := movieComment.scrape(s)
+		if err != nil {
+			err = fmt.Errorf("comments, i=%d, %w", i, err)
+		}
+
+		movieComments = append(movieComments, movieComment)
+		scrapingErrs = append(scrapingErrs, err)
+	})
+
+	if err := errors.Join(scrapingErrs...); err != nil {
+		debug.Println(err)
+		return nil, err
+	}
+
+	return movieComments, nil
 }
