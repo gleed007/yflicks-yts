@@ -11,9 +11,9 @@ setup_devdeps:
 
 test: 
 ifeq ($(verbose), true) 
-	@go test -v -cover ./...
+	@go test -v -cover $$(go list)
 else
-	@go test -cover ./...
+	@go test -cover $$(go list)
 endif
 
 test_coverage:
