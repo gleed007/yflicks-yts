@@ -22,6 +22,11 @@ func main() {
 		movieSuggestions,
 		movieDetails,
 		searchMovies,
+		resolveMovieSlugToID,
+		movieDirector,
+		movieReviews,
+		movieComments,
+		movieAdditionalDetails,
 	}
 
 	for _, caller := range methodCallers {
@@ -86,6 +91,72 @@ func searchMovies() error {
 	const methodName = "SearchMovies"
 	filters := yts.DefaultSearchMoviesFilters("oppenheimer")
 	response, err := client.SearchMovies(filters)
+	if err != nil {
+		message := formatMethodReturns(methodName, response, err)
+		return errors.New(message)
+	}
+
+	logMethodResponse(methodName, response)
+	return nil
+}
+
+func resolveMovieSlugToID() error {
+	const methodName = "ResolveMovieSlugToID"
+	const slug = "oppenheimer-2023"
+	response, err := client.ResolveMovieSlugToID(slug)
+	if err != nil {
+		message := formatMethodReturns(methodName, response, err)
+		return errors.New(message)
+	}
+
+	logMethodResponse(methodName, response)
+	return nil
+}
+
+func movieDirector() error {
+	const methodName = "MovieDirector"
+	const slug = "oppenheimer-2023"
+	response, err := client.MovieDirector(slug)
+	if err != nil {
+		message := formatMethodReturns(methodName, response, err)
+		return errors.New(message)
+	}
+
+	logMethodResponse(methodName, response)
+	return nil
+}
+
+func movieReviews() error {
+	const methodName = "MovieReviews"
+	const slug = "oppenheimer-2023"
+	response, err := client.MovieReviews(slug)
+	if err != nil {
+		message := formatMethodReturns(methodName, response, err)
+		return errors.New(message)
+	}
+
+	logMethodResponse(methodName, response)
+	return nil
+}
+
+func movieComments() error {
+	const methodName = "MovieComments"
+	const slug = "oppenheimer-2023"
+	const page = 1
+	response, err := client.MovieComments(slug, page)
+	if err != nil {
+		message := formatMethodReturns(methodName, response, err)
+		return errors.New(message)
+	}
+
+	logMethodResponse(methodName, response)
+	return nil
+}
+
+func movieAdditionalDetails() error {
+	const methodName = "MovieAdditionalDetails"
+	const slug = "oppenheimer-2023"
+	response, err := client.MovieAdditionalDetails(slug)
 	if err != nil {
 		message := formatMethodReturns(methodName, response, err)
 		return errors.New(message)
