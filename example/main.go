@@ -19,9 +19,9 @@ func main() {
 	var methodCallers = []func() error{
 		trendingMovies,
 		homePageContent,
-		MovieSuggestions,
-		MovieDetails,
-		SearchMovies,
+		movieSuggestions,
+		movieDetails,
+		searchMovies,
 	}
 
 	for _, caller := range methodCallers {
@@ -55,7 +55,7 @@ func trendingMovies() error {
 	return nil
 }
 
-func MovieSuggestions() error {
+func movieSuggestions() error {
 	const methodName = "MovieSuggestions"
 	const movieID = 3175
 	response, err := client.MovieSuggestions(movieID)
@@ -68,7 +68,7 @@ func MovieSuggestions() error {
 	return nil
 }
 
-func MovieDetails() error {
+func movieDetails() error {
 	const methodName = "MovieDetails"
 	const movieID = 3175
 	filters := yts.DefaultMovieDetailsFilters()
@@ -82,7 +82,7 @@ func MovieDetails() error {
 	return nil
 }
 
-func SearchMovies() error {
+func searchMovies() error {
 	const methodName = "SearchMovies"
 	filters := yts.DefaultSearchMoviesFilters("oppenheimer")
 	response, err := client.SearchMovies(filters)
